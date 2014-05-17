@@ -38,3 +38,35 @@ for i in range(len(ESPlist)):
     reclist.append(minilist)
 
 l=[l for l in reclist if l[1]=='TP53']
+
+i=0;
+for a in l:
+	# l[i][0]="chr"+l[i][0]
+	# b=l[i][1]
+	# c=l[i][2]
+	# l[i][1]=l[i][3]
+	# l[i][2]=l[i][4]
+	# l[i][3]=b
+	# l[i][4]=c
+	# i=i+1
+	d=[]
+	d.append("chr"+a[0])
+	b=a[1]
+	c=a[2]
+	d.append(a[3])
+	d.append(a[4])
+	d.append(b)
+	d.append(c)
+	l[i]=d
+	i=i+1
+
+while True:
+	try:
+		with open('./pmodel/gene.bed','w+') as f:
+			for y in l:
+				print>>f,'\t'.join([x for x in y])
+				i=i+1
+	except TypeError:
+		print l[i] 
+		break
+	break
