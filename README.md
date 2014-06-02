@@ -1,4 +1,4 @@
 pmodel
 ======
 
-For modeling genetic variation based on protein domains.  Extracts 6500 ESP vcfs and finds a gene in it, and then intersects with protein domains where relevant to SNPs.
+For modeling genetic variation based on protein domains.  Extracts 6500ESP vcf SNPs and then intersects with Pfam protein domains.  Finds top and bottom 10 occurring domains by count and by ratio of domain count to total number of variants.
