@@ -62,7 +62,7 @@ for a in l:
 
 while True:
 	try:
-		with open('./pmodel/gene.bed','w+') as f:
+		with open('~/data/pmodeldata/gene.bed','w+') as f:
 			for y in l:
 				print>>f,'\t'.join([x for x in y])
 				i=i+1

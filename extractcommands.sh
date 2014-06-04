@@ -1,21 +1,25 @@
 #for initial p53 pass:
-#(grep ^# ESP6500SI-V2-SSA137.updatedRsIds.chr1.snps_indels.vcf; grep -v ^# -h ESP*.vcf) > foo.vcf; mv foo.vcf ESPALL.vcf
+#(grep ^# $DATA/ESP6500SI-V2-SSA137.updatedRsIds.chr1.snps_indels.vcf; grep -v ^# -h $DATA/ESP*.vcf) > $DATA/foo.vcf; mv $DATA/foo.vcf $DATA/ESPALL.vcf
 #python extract.py
 #hgTables is pfam from UCSC GenomeBrowser
-#cat hgTables | awk '{t=$1;$1=$2;$2=t;t=$2;$2=$3;$3=t;t=$3;$3=$4;$4=t;print;}' | tr -s " " | tr -s " " "\t" | tail -n +2 | sort -k1,1 -k2,2n > hgTables.bed
-#bedtools intersect -a hgTables.bed -b gene.bed -sorted | sort -k1,1 -k2,2n | bedtools merge -i stdin -c 4,5 -o distinct > p53domain.bed
+#cat $DATA/hgTables | awk '{t=$1;$1=$2;$2=t;t=$2;$2=$3;$3=t;t=$3;$3=$4;$4=t;print;}' | tr -s " " | tr -s " " "\t" | tail -n +2 | sort -k1,1 -k2,2n > $DATA/hgTables.bed
+#bedtools intersect -a $DATA/hgTables.bed -b $DATA/gene.bed -sorted | sort -k1,1 -k2,2n | bedtools merge -i stdin -c 4,5 -o distinct > $DATA/p53domain.bed
 #for bill's gtfs:
 export DATA=~/work/data/pmodeldata
 for chrom in {1..22}
 do
-cat $DATA/Homo_sapiens.chr$chrom.pfam.gtf | awk -F$'\t' '{OFS="\t"} {t=$2;$2=$4;$4=t;t=$3;$3=$5;$5=t;print;}' | awk -F$'\t' '{OFS="\t"} {if (($7 == "-") && ($2 > $3)) {t=$2; $2=$3; $3=t;} print $0}' | sort -k1,1 -k2,2n | tr -s " " "\t" > chr$chrom.bed
-bedtools intersect -a <(cut -f 1-24 chr$chrom.bed) -b $DATA/ESP6500SI-V2-SSA137.updatedRsIds.chr$chrom.snps_indels.vcf -sorted > intchr$chrom.bed
+python rearrange.py $DATA/Homo_sapiens.chr$chrom.pfam.gtf | sort -k1,1 -k2,2n > $DATA/chr$chrom.bed
+bedtools intersect -a $DATA/chr$chrom.bed -b $DATA/ESP6500SI-V2-SSA137.updatedRsIds.chr$chrom.snps_indels.vcf -sorted > $DATA/intchr$chrom.bed
+bedtools intersect -a <(cat $DATA/chr$chrom.bed | tr -s " " "\t" | cut -f 1,2,3,5,6,7,8,9,10,11 ) -b $DATA/ESP6500SI-V2-SSA137.updatedRsIds.chr$chrom.snps_indels.vcf -sorted > $DATA/chrcount$chrom.bed
 done
-(cat chr1.bed; cat chr*.bed) > all.bed
-(cat intchr1.bed; cat intchr*.bed) > allint.bed
-rm chr* intchr*
-sort allint.bed -k22,22 | bedtools groupby -g 22 -c 22 -o count | sort -k2,2nr | head > top10.txt
-sort allint.bed -k22,22 | bedtools groupby -g 22 -c 22 -o count | sort -k2,2nr | tail > bottom10.txt
-sum=$(sort allint.bed -k22,22 | bedtools groupby -g 22 -c 22 -o count | awk '{ sum += $2 } END {print sum}')
-cat top10.txt | awk '{ratio=$2/sum} {print $1"\t"ratio}' sum="$sum" > top10ratio.txt
-cat bottom10.txt | awk '{ratio=$2/sum} {print $1"\t"ratio}' sum="$sum" > bottom10ratio.txt
+cat $DATA/chr*.bed | sort -k1,1 -k2,2n > $DATA/all.bed
+cat $DATA/intchr*.bed | sort -k1,1 -k2,2n > $DATA/allint.bed
+cat $DATA/chrcount*.bed | sort -k10,10 | bedtools groupby -g 10 -c 10 -o count | sort -k1,1  > $DATA/allcount.bed
+rm $DATA/chr* $DATA/intchr* rm $DATA/chrcount*
+sort -k2,2nr $DATA/allcount.bed | head > top10.txt
+sort -k2,2nr $DATA/allcount.bed | tail > bottom10.txt
+cat $DATA/all.bed | tr -s " " "\t" | cut -f 4,11 | sort -k2,2 | less
+cat $DATA/all.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {for (i in arr) {print i,arr[i]}}' | sort -k1,1 > $DATA/sumlist.bed
+python divide.py $D/allcount.bed $D/sumlist.bed > $DATA/allratio.bed
+sort -k2,2n $DATA/allratio.bed | head > top10ratio.txt
+sort -k2,2n $DATA/allratio.bed | tail > bottom10ratio.txt
