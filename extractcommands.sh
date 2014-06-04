@@ -20,6 +20,6 @@ sort -k2,2nr $DATA/allcount.bed | head > top10.txt
 sort -k2,2nr $DATA/allcount.bed | tail > bottom10.txt
 cat $DATA/all.bed | tr -s " " "\t" | cut -f 4,11 | sort -k2,2 | less
 cat $DATA/all.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {for (i in arr) {print i,arr[i]}}' | sort -k1,1 > $DATA/sumlist.bed
-python divide.py $D/allcount.bed $D/sumlist.bed > $DATA/allratio.bed
+python divide.py $DATA/allcount.bed $DATA/sumlist.bed > $DATA/allratio.bed
 sort -k2,2n $DATA/allratio.bed | head > top10ratio.txt
 sort -k2,2n $DATA/allratio.bed | tail > bottom10ratio.txt
