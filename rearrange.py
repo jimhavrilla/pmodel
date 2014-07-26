@@ -3,26 +3,39 @@ import string
 import sys
 import fileinput
 
+class Record(object):
+	def __init__(self, fields):
+		self.chr = fields[0]
+		self.info = fields[8]+";"
+		self.start = fields[3]
+		self.end = fields[4]
+		self.database = fields[1]
+		self.seqtype = fields[2]
+		self.field6 = fields[5]
+		self.field8 = fields[7]
+		self.strand = fields[6]
+
 for line in fileinput.input():
-	foo=line.rstrip().split("\t")
-	foo[8]=foo[8]+"; "
-	a=foo[1]
-	b=foo[2]
-	if int(foo[3])>intq(foo[4]):
-		foo[2]=foo[3]
-		foo[1]=foo[4]
-	else:
-		foo[1]=foo[3]
-		foo[2]=foo[4]
-	foo[3]=a
-	foo[4]=b
-	m=re.search("pfamA_id.*?; ",foo[8])
-	n=re.sub(" pfamA_id.*?;","",foo[8])
-	foo[8]=m.group(0)+n
-	if("ccds_id" in foo[8]):
-		m=re.search("ccds_id.*?;",foo[8])
-		n=re.sub("ccds_id.*?; ","",foo[8])
-		foo[8]=n+m.group(0)
-	foo=[foo[0],foo[1],foo[2],str(int(foo[2])-int(foo[1])),foo[3],foo[4],foo[5],foo[6],foo[7],foo[8]]
-	line="\t".join(foo)
-	sys.stdout.write(line+"\n")
+	fields=line.rstrip().split("\t")
+	try:
+		old_r=r
+	except NameError:
+		pass
+	r=Record(fields)
+	if int(r.start)>int(r.end):
+		tmp=r.start
+		r.start=r.end
+		r.end=tmp
+	m=re.search("pfamA_id.*?; ",r.info)
+	n=re.sub(" pfamA_id.*?;","",r.info)
+	r.info=m.group(0)+n
+	if("ccds_id" in r.info):
+		m=re.search(" ccds_id.*?;",r.info)
+		n=re.sub("ccds_id.*?; ","",r.info)
+		r.info=n+m.group(0)
+	# try:
+	# 	if re.search("pfamA_id.*?;",r.info).group(0) == re.search("pfamA_id.*?;",old_r.info).group(0):
+	# 		continue
+	# except NameError:
+	# 	pass
+	sys.stdout.write("\t".join([r.chr,r.start,r.end,str(int(r.end)-int(r.start)+1),r.database,r.seqtype,r.field6,r.strand,r.field8,r.info])+"\n")

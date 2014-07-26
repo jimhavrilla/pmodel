@@ -1,0 +1,21 @@
+notes
+
+bill will mark/remove incomplete transcripts
+bill will give the total domain count for pfamA
+
+create ensembl file from original gtf file
+**dedup based on auto_reg
+create count for syn/non-syn muts from vcfs and add MAF
+
+create this table after intersect mut:
+domain	type (syn?)	MAF	# of occurrences	total bp
+7tm_4 non-syn .01 100 2000
+Ribosomal syn .001 10 100
+
+defining non-synonymous:
+	missense,missense-near-splice,stop-gained,stop-gained-near-splice,stop-lost
+defining synonymous:
+	coding,coding-notMod3,coding-synonymous,coding-synonymous-near-splice,codingComplex
+
+make point size in dn/ds a function of the numerator (dn)
+color points in dn/ds as a function of the median MAF
