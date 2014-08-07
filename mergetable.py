@@ -51,7 +51,7 @@ while table and count and totsum:
 		totsum=f3.readline()
 		c=RecordC(totsum.split(";"))
 	if a.domain==b.domain==c.domain:
-		print "\t".join([a.domain,a.gene,a.nonsynct,a.synct,a.totalct,b.count,c.totalbp,a.mmaf,a.dnds,str(round(float(a.totalct)/float(c.totalbp),2))])
+		print "\t".join([a.domain,a.gene,a.nonsynct,a.synct,a.totalct,b.count,c.totalbp,a.mmaf,a.dnds,str(float(a.totalct)/float(c.totalbp))])
 		table=f1.readline()
 		count=f2.readline()
 		totsum=f3.readline()
