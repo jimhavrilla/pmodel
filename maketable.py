@@ -11,10 +11,11 @@ class Record3(object):
 		self.start = fields[1]
 		self.end = fields[2]
 		self.strand = fields[3]
-		self.domain = fields[4].strip("\"")
-		self.gene = fields[5].strip("\"")
-		self.maf = float(fields[6])
-		self.type = fields[7]
+		self.uniqid = fields[4]
+		self.domain = fields[5].strip("\"")
+		self.gene = fields[6].strip("\"")
+		self.maf = float(fields[7])
+		self.type = fields[8]
 
 ct=0
 nct=0
