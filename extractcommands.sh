@@ -9,7 +9,7 @@ mysql -N --raw -h wrpxdb.its.virginia.edu -u web_user -pfasta_www pfam27 < count
 grep ^# $DATA/ESP6500SI-V2-SSA137.updatedRsIds.chr1.snps_indels.vcf; grep -v ^# -h $DATA/ESP*.vcf) > $DATA/foo.vcf; mv $DATA/foo.vcf $DATA/ESPALL.vcf
 export DATA=~/work/data/pmodeldata
 gzcat $DATA/Homo_sapiens.GRCh37.75.gtf.gz | grep 'protein_coding\texon' | sed 's/protein_coding\texon\t//g' > $DATA/GRCh37.bed
-#grep -v -E "C|G" $DATA/mart_export.bed | sort -k1,1 -k2,2n | sed '395352d' > foo.txt; mv foo.txt $DATA/mart_export.bed; # human genes from Ensembl
+#grep -v -E "C|G" $DATA/mart_export.bed | sort -k1,1 -k2,2n | sed '395352d' > foo.bed; mv foo.bed $DATA/mart_export.bed; # human genes from Ensembl
 for chrom in {1..22} X Y ; do wget -P $DATA http://fastademo.bioch.virginia.edu/pfam_dna/Homo_sapiens.chr$chrom.pfam.gtf; done
 for chrom in {1..22} X Y
 do
@@ -18,23 +18,23 @@ done
 cat $DATA/chr*.bed | sort -k1,1 -k2,2n > $DATA/all.bed
 rm $DATA/chr*
 # remove utrs and introns
-bedtools intersect -a $DATA/all.bed -b $DATA/GRCh37.bed -wb | awk {'print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$17'} FS='\t' OFS='\t' | sort -k1,1 -k2,2n > $DATA/foo.txt
-bedtools subtract -b $DATA/all.bed -a $DATA/GRCh37.bed | awk '{print $1,$2,$3,$4,$5,$6,$7}' FS="\t" OFS="\t" | sort -k1,1 -k2,2n > $DATA/foo2.txt
-python rearrange2.py $DATA/foo.txt $DATA/foo2.txt $DATA/all.bed $DATA/allnodom.bed
+bedtools intersect -a $DATA/all.bed -b $DATA/GRCh37.bed -wb | awk {'print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$17'} FS='\t' OFS='\t' | perl uniq.pl | sort -t";" -k18,18 > $DATA/foo.bed
+#bedtools subtract -b $DATA/all.bed -a $DATA/GRCh37.bed | awk '{print $1,$2,$3,$4,$5,$6,$7}' FS="\t" OFS="\t" | sort -k1,1 -k2,2n > $DATA/foo2.bed
+python rearrange2.py $DATA/foo.bed $DATA/all.bed
 # get a count for variants per domain
-bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/all.bed | tr -s " " "\t" | cut -f 1,2,3,8,11,13,15 ) -b $DATA/ESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,15 | tee $DATA/foo.txt | sort -k6,6 | bedtools groupby -g 6 -c 6 -o count | sort -k1,1 > $DATA/allcount.bed
+bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/all.bed | tr -s " " "\t" | cut -f 1,2,3,8,11,13,15 ) -b $DATA/ESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,15 | tee $DATA/foo.bed | sort -k6,6 | bedtools groupby -g 6 -c 6 -o count | sort -k1,1 > $DATA/allcount.bed
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/allnodom.bed | tr -s " " "\t" | cut -f 1,2,3,9,17 ) -b $DATA/ESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,13 | awk -F";" '{print $1,$2,$7,$20}' | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' > $DATA/nodomint.bed
-# if you want to check type count: awk -F";" '{print $1,$2,$7,$20}' foo.txt | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' | tr -s " " "\t" | cut -f 8 | sort -k1,1 | uniq -c
+# if you want to check type count: awk -F";" '{print $1,$2,$7,$20}' foo.bed | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' | tr -s " " "\t" | cut -f 8 | sort -k1,1 | uniq -c
 # get MAF and convert from percent to fraction, variant type (FG), gene, domain, chr, start, end for analysis
-awk -F";" '{print $1,$2,$3,$8,$21}' $DATA/foo.txt | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' | awk '{print $1,$2,$3,$4,$5,$6,$7,$8/100,$9}' | tr -s " " "\t" | sort -k6,6 > $DATA/allint.bed; rm $DATA/foo.txt
-#awk -F";" '{print $1,$2,$7,$20,$22}' $DATA/foo.txt | perl -pe 's/HGVS_PROTEIN_VAR.*?p.\(//g' | perl -pe 's/FG=.*?\KNM_.*?p.\(//g' 
+awk -F";" '{print $1,$2,$3,$8,$21}' $DATA/foo.bed | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' | awk '{print $1,$2,$3,$4,$5,$6,$7,$8/100,$9}' | tr -s " " "\t" | sort -k6,6 > $DATA/allint.bed; rm $DATA/foo.bed
+#awk -F";" '{print $1,$2,$7,$20,$22}' $DATA/foo.bed | perl -pe 's/HGVS_PROTEIN_VAR.*?p.\(//g' | perl -pe 's/FG=.*?\KNM_.*?p.\(//g' 
 #sort counts from bill by domain
-sort -k2,2 $DATA/human_pfam.counts > $DATA/foo.txt; mv $DATA/foo.txt $DATA/human_pfam.counts
+sort -k2,2 $DATA/human_pfam.counts > $DATA/foo.bed; mv $DATA/foo.bed $DATA/human_pfam.counts
 #get total bp for each domain
 cat $DATA/all.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {for (i in arr) {print i,arr[i]}}' | sort -k1,1 > $DATA/sumlist.bed
 # make table of counts, non-syn, syn, total var, total bp/exome per domain
-python maketable.py $DATA/allint.bed > $DATA/foo.txt
-python mergetable.py $DATA/foo.txt $DATA/human_pfam.counts $DATA/sumlist.bed > $DATA/dtable.txt; rm $DATA/foo.txt
+python maketable.py $DATA/allint.bed > $DATA/foo.bed
+python mergetable.py $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed > $DATA/dtable.txt; rm $DATA/foo.bed
 
 R commands:
 
