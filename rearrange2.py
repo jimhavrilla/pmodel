@@ -1,22 +1,24 @@
-import re
 import string
 import sys
 import fileinput
+import pybedtools
 
 class Record1(object):
 	def __init__(self, fields):
 		self.chr = fields[0]
 		self.start = fields[1]
 		self.end = fields[2]
-		self.info = fields[9]
+		self.info = " ".join(fields[9:len(fields)])
 		self.interval = fields[3]
 		self.database = fields[4]
 		self.seqtype = fields[5]
 		self.field7 = fields[6]
 		self.field9 = fields[8]
 		self.strand = fields[7]
-		self.transid = re.search("transcript_id (.*?);",fields[10]).group(1).strip("\"")
-		self.uniqid = fields[10].split(";")[9].split(" ")[2]
+		self.transid = fields[14]
+		self.transid2 = fields[28]
+		self.uniqid = fields[44].rstrip(';')
+		self.autoreg = fields[24]
 
 # class Record2(object):
 # 	def __init__(self,fields):
@@ -38,34 +40,45 @@ class Record1(object):
 # 		foo=self.info.rstrip().split(";")
 # 		bar=(foo[2]+foo[0]+foo[8]).split("\"")
 # 		self.uniqid=bar[3]+"_"+bar[5]
-
-f1=open(sys.argv[2],"w")
-# f2=open(sys.argv[4],"w+")
-
-for line in fileinput.input(sys.argv[1]):
+f1=open(sys.argv[1],"r")
+f2=open(sys.argv[2],"w")
+bed=''
+line=f1.readline()
+fields=line.rstrip().split("\t")
+r=Record1(fields)
+bed=bed+r.chr+"\t"+r.start+"\t"+r.end+"\n"
+for line in f1:
 	fields=line.rstrip().split("\t")
 	try:
 		old_r=r
 	except NameError:
 		pass
 	r=Record1(fields)
+	if r.transid != r.transid2:
+		continue
 	try:
-		if re.search("transcript_id (.*?);",r.info).group(1).strip("\"") != r.transid:
+		if r.uniqid == old_r.uniqid:
+			bed=str(pybedtools.BedTool(bed.rstrip('\n'),from_string=True).merge())
 			continue
+		else:
+			for i in bed.splitlines():
+				i=i.split("\t")
+				old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
+				f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
+				bed=''
 	except NameError:
 		pass
-	try:
-		if r.uniqid == old_r.uniqid or re.search("pfamA_auto_reg.*?;",r.info).group(0) == re.search("pfamA_auto_reg.*?;",old_r.info).group(0):
-			continue
-	except NameError:
-		pass
-	f1.write("\t".join([r.chr,r.start,r.end,str(int(r.end)-int(r.start)+1),r.database,r.seqtype,r.field7,r.strand,r.field9,"uniq_id "+r.uniqid+"; "+r.info])+"\n")
+	bed=bed+r.chr+"\t"+r.start+"\t"+r.end+"\n"
+
+f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
+
+f1.close();f2.close();
 
 # del old_r,r
 
 # ct=1;
 
-# for line in fileinput.input(sys.argv[2]):
+# for line in fileinput.input(sys.argv[3]):
 # 	fields=line.rstrip().split("\t")
 # 	try:
 # 		old_r=r
@@ -85,6 +98,6 @@ for line in fileinput.input(sys.argv[1]):
 # 			continue
 # 	except NameError:
 # 		pass
-# 	f2.write("\t".join([r.chr,r.start,r.end,str(int(r.end)-int(r.start)+1),r.field4,r.strand,r.field6,"uniq_id "+r.uniqid+"; "+r.info])+"\n")
+# 	f3.write("\t".join([r.chr,r.start,r.end,str(int(r.end)-int(r.start)+1),r.field4,r.strand,r.field6,"uniq_id "+r.uniqid+"; "+r.info])+"\n")
 
-f1.close();#f2.close()
+#f3.close()
