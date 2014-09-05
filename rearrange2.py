@@ -43,34 +43,25 @@ class Record1(object):
 f1=open(sys.argv[1],"r")
 f2=open(sys.argv[2],"w")
 bed=''
-line=f1.readline()
-fields=line.rstrip().split("\t")
-r=Record1(fields)
-bed=bed+r.chr+"\t"+r.start+"\t"+r.end+"\n"
+old_r=None
 for line in f1:
 	fields=line.rstrip().split("\t")
-	try:
-		old_r=r
-	except NameError:
-		pass
-	r=Record1(fields)
-	if r.transid != r.transid2:
-		continue
-	try:
-		if r.uniqid == old_r.uniqid:
-			bed=str(pybedtools.BedTool(bed.rstrip('\n'),from_string=True).merge())
-			continue
-		else:
-			for i in bed.splitlines():
-				i=i.split("\t")
-				old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
-				f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
-				bed=''
-	except NameError:
-		pass
-	bed=bed+r.chr+"\t"+r.start+"\t"+r.end+"\n"
+	r_=Record1(fields)
+	if old_r != None and r_.uniqid != old_r.uniqid:
+		bed=str(pybedtools.BedTool(bed.rstrip('\n'),from_string=True).merge())
+		for i in bed.splitlines():
+			i=i.split("\t")
+			old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
+			f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
+		bed=''
+	bed=bed+r_.chr+"\t"+r_.start+"\t"+r_.end+"\n"
+	old_r=r_
 
-f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
+bed=str(pybedtools.BedTool(bed.rstrip('\n'),from_string=True).merge())
+for i in bed.splitlines():
+	i=i.split("\t")
+	old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
+	f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
 
 f1.close();f2.close();
 
