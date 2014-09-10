@@ -7,6 +7,7 @@
 mysql -N --raw -h wrpxdb.its.virginia.edu -u web_user -pfasta_www pfam27 < count_human_pfam.sql > human_pfam.counts
 #for bill's gtfs:
 grep ^# $DATA/ESP6500SI-V2-SSA137.updatedRsIds.chr1.snps_indels.vcf; grep -v ^# -h $DATA/ESP*.vcf) > $DATA/foo.vcf; mv $DATA/foo.vcf $DATA/ESPALL.vcf
+perl variant_effect_predictor.pl -i $DATA/ESPALL.vcf -o $DATA/VEPESPALL.vcf --offline --format vcf --vcf --force_overwrite;
 export DATA=~/work/data/pmodeldata
 gzcat $DATA/Homo_sapiens.GRCh37.75.gtf.gz | grep 'protein_coding\texon' | sed 's/protein_coding\texon\t//g' > $DATA/GRCh37.bed
 #grep -v -E "C|G" $DATA/mart_export.bed | sort -k1,1 -k2,2n | sed '395352d' > foo.bed; mv foo.bed $DATA/mart_export.bed; # human genes from Ensembl
@@ -21,9 +22,11 @@ rm $DATA/chr*
 bedtools intersect -a $DATA/all.bed -b $DATA/GRCh37.bed -wb | awk {'print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$17'} FS='\t' OFS='\t' | perl uniq.pl | tr -s " " "\t" | sort -k45,45 -k1,1 -k2,2n > $DATA/foo.bed
 python rearrange2.py $DATA/foo.bed $DATA/alluniq.bed
 sort -k11,11 -k1,1 -k2,2n $DATA/foo.bed | python rearrange3.py $DATA/alldom.bed
+1	25817901	25818075	.	+	.	gene^C
+bedtools intersect -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b <(sort -k1,1 -k2,2n $DATA/alluniq.bed) -wa -wb | awk '{ if ($8==$51 && $24==$67) print $0}' | tr -s " " "\t" | cut -f -35 | python nodom.py $DATA/nodom.bed
 # get a count for variants per domain
-bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alldom.bed | tr -s " " "\t" | cut -f 1,2,3,8,11,13,45 ) -b $DATA/ESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,15 | tee $DATA/foo.bed | sort -k6,6 | bedtools groupby -g 6 -c 6 -o count | sort -k1,1 > $DATA/allcount.bed
-bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/allnodom.bed | tr -s " " "\t" | cut -f 1,2,3,9,17 ) -b $DATA/ESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,13 | awk -F";" '{print $1,$2,$7,$20}' | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' > $DATA/nodomint.bed
+bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alldom.bed | tr -s " " "\t" | cut -f 1,2,3,8,11,13,45 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,15 | tee $DATA/foo.bed | sort -k6,6 | bedtools groupby -g 6 -c 6 -o count | sort -k1,1 > $DATA/allcount.bed
+bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/allnodom.bed | tr -s " " "\t" | cut -f 1,2,3,9,17 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,13 | awk -F";" '{print $1,$2,$7,$20}' | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' > $DATA/nodomint.bed
 # if you want to check type count: awk -F";" '{print $1,$2,$7,$20}' foo.bed | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' | tr -s " " "\t" | cut -f 8 | sort -k1,1 | uniq -c
 # get MAF and convert from percent to fraction, variant type (FG), gene, domain, chr, start, end for analysis
 awk -F";" '{print $1,$2,$3,$8,$21}' $DATA/foo.bed | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' | awk '{print $1,$2,$3,$4,$5,$6,$7,$8/100,$9}' | tr -s " " "\t" | sort -k6,6 > $DATA/allint.bed; rm $DATA/foo.bed

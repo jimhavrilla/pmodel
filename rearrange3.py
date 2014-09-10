@@ -20,27 +20,7 @@ class Record1(object):
 		self.transid2 = fields[28]
 		self.uniqid = fields[44].rstrip(';')
 		self.autoreg = fields[24]
-
-# class Record2(object):
-# 	def __init__(self,fields):
-# 		self.chr = fields[0]
-# 		self.start = fields[1]
-# 		self.end = fields[2]
-# 		self.field4 = fields[3]
-# 		self.strand = fields[4]
-# 		self.field6 = fields[5]
-# 		self.info = fields[6]
-# 		if("ccds_id" in self.info):
-# 			m=re.search(" ccds_id.*?;",self.info)
-# 			n=re.sub("ccds_id.*?; ","",self.info)
-# 			self.info=n+m.group(0)
-# 		if("tag" in self.info):
-# 			m=re.search(" tag.*?;",self.info)
-# 			n=re.sub("tag.*?; ","",self.info)
-# 			self.info=n+m.group(0)
-# 		foo=self.info.rstrip().split(";")
-# 		bar=(foo[2]+foo[0]+foo[8]).split("\"")
-# 		self.uniqid=bar[3]+"_"+bar[5]
+		
 f2=open(sys.argv[1],"w")
 bed=''
 old_r=None
