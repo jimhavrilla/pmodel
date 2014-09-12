@@ -38,4 +38,4 @@ for line in fileinput.input():
 	# 		continue
 	# except NameError:
 	# 	pass
-	sys.stdout.write("\t".join([r.chr,r.start,r.end,str(int(r.end)-int(r.start)+1),r.database,r.seqtype,r.field6,r.strand,r.field8,r.info])+"\n")
+	sys.stdout.write("\t".join([r.chr,str(int(r.start)-1),str(int(r.end)-1),str(int(r.end)-int(r.start)+1),r.database,r.seqtype,r.field6,r.strand,r.field8,r.info])+"\n")

@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
 while (<>){
-	my $old = <>;
+	my $old = $_;
 	$old =~ s/ tag ".*?";//g;
-	my $new = ($old =~ s/.*pfamA_acc "(.*?)".*gene_id "(.*?)".*exon_id "(.*?)"/$2_$3_$1/r);
+	my $new = ($old =~ s/.*pfamA_auto_reg "(.*?)".*gene_id "(.*?)".*exon_id "(.*?)"/$2_$3_$1/r);
 	my $new2 = "";
 	if (/ccds_id ".*?";/) {$new2 = ($old =~ s/.*(ccds_id ".*?").*/$1\;/r);}
 	$old =~ s/ ccds_id ".*?";*//g;

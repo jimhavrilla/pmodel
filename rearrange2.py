@@ -64,31 +64,3 @@ for i in bed.splitlines():
 	f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
 
 f1.close();f2.close();
-
-# del old_r,r
-
-# ct=1;
-
-# for line in fileinput.input(sys.argv[3]):
-# 	fields=line.rstrip().split("\t")
-# 	try:
-# 		old_r=r
-# 	except NameError:
-# 		pass
-# 	r=Record2(fields)
-# 	try:
-# 		if re.search("gene_id (.*?);",r.info).group(1).strip("\"") == re.search("gene_id (.*?);",old_r.info).group(1).strip("\""):
-# 			ct=ct+1;
-# 		else:
-# 			ct=1;
-# 	except NameError:
-# 		pass
-# 	r.uniqid=r.uniqid+"_ND"+str(ct)
-# 	try:
-# 		if re.search("exon_id.*?;",r.info).group(0) == re.search("exon_id.*?;",old_r.info).group(0) and re.search("gene_id.*?;",r.info).group(0) == re.search("gene_id.*?;",old_r.info).group(0):
-# 			continue
-# 	except NameError:
-# 		pass
-# 	f3.write("\t".join([r.chr,r.start,r.end,str(int(r.end)-int(r.start)+1),r.field4,r.strand,r.field6,"uniq_id "+r.uniqid+"; "+r.info])+"\n")
-
-#f3.close()
