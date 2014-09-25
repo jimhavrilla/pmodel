@@ -13,7 +13,7 @@ class Record1(object):
 			self.chr2 = fields[len(fields)-11]
 			self.start2 = fields[len(fields)-10]
 			self.end2 = fields[len(fields)-9]
-			self.info=self.info+" "+" ".join([fields[len(fields)-2],fields[len(fields)-1]])
+			self.info=self.info+" near_"+" ".join([fields[len(fields)-2],fields[len(fields)-1]])
 		else:
 			self.chr2 = None
 			self.start2 = None
@@ -42,7 +42,7 @@ for line in sys.stdin:
 			ct2=ct2+1
 			i=i.split("\t")
 			old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
-			f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.info+" "+old_r.uniqid+str(ct+ct2)])+"\n")
+			f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.info+" uniqid "+old_r.uniqid+str(ct+ct2)])+"\n")
 
 	old_r=r_
 
@@ -57,6 +57,6 @@ for i in bed.splitlines():
 	ct2=ct2+1
 	i=i.split("\t")
 	old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
-	f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.info+" "+old_r.uniqid+str(ct+ct2)])+"\n")
+	f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.info+" uniqid "+old_r.uniqid+str(ct+ct2)])+"\n")
 
 f2.close();
