@@ -22,41 +22,29 @@ class Record3(object):
 		self.type = fields[12]
 		self.info = fields[13:23]
 
-def count(r_):
-
+def count(old_r,mmaf,ct,nct,sct):
+	with warnings.catch_warnings(): #catches NaN warnings and empty slices
+		warnings.simplefilter("ignore")
+		mmaf=numpy.median(mmaf)
+	try:
+		sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct),2)),str(mmaf)])+"\n")
+	except ZeroDivisionError:
+		sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct+1),2)),str(mmaf)])+"\n")
+	ct=0
+	nct=0
+	sct=0
+	mmaf=[]
+	return [mmaf,ct,nct,sct]
 
 
 ct=0
 nct=0
 sct=0
 mmaf=[]
-mmafct=0
+old_r=None
 for line in fileinput.input():
 	fields=line.rstrip().split("\t")
-	try:
-		old_r=r_
-	except NameError:
-		pass
 	r_=Record3(fields)
-	try:
-		if old_r.domain != r_.domain:
-			with warnings.catch_warnings(): #catches NaN warnings and empty slices
-				warnings.simplefilter("ignore")
-				mmaf=numpy.median(mmaf)
-			if ct==0:
-				mmaf=[]
-				continue
-			try:
-				sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct),2)),str(mmaf)])+"\n")
-			except ZeroDivisionError:
-				sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct+1),2)),str(mmaf)])+"\n")
-			ct=0
-			nct=0
-			sct=0
-			mmaf=[]
-			continue
-	except NameError:
-		pass
 	if r_.type=="ds":
 		sct=sct+1
 		ct=ct+1
@@ -65,3 +53,45 @@ for line in fileinput.input():
 		nct=nct+1
 		ct=ct+1
 		mmaf.append(r_.maf)
+	if old_r!=None and old_r.domain != r_.domain:
+		[mmaf,ct,nct,sct]=count(old_r,mmaf,ct,nct,sct)
+	
+	old_r=r_
+
+count(r_,mmaf,ct,nct,sct)
+
+
+# for line in fileinput.input():
+# 	fields=line.rstrip().split("\t")
+# 	try:
+# 		old_r=r_
+# 	except NameError:
+# 		pass
+# 	r_=Record3(fields)
+# 	try:
+# 		if old_r.domain != r_.domain:
+# 			with warnings.catch_warnings(): #catches NaN warnings and empty slices
+# 				warnings.simplefilter("ignore")
+# 				mmaf=numpy.median(mmaf)
+# 			if ct==0:
+# 				mmaf=[]
+# 				continue
+# 			try:
+# 				sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct),2)),str(mmaf)])+"\n")
+# 			except ZeroDivisionError:
+# 				sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct+1),2)),str(mmaf)])+"\n")
+# 			ct=0
+# 			nct=0
+# 			sct=0
+# 			mmaf=[]
+# 			continue
+# 	except NameError:
+# 		pass
+# 	if r_.type=="ds":
+# 		sct=sct+1
+# 		ct=ct+1
+# 		mmaf.append(r_.maf)
+# 	if r_.type=="dn":
+# 		nct=nct+1
+# 		ct=ct+1
+# 		mmaf.append(r_.maf)
