@@ -1,5 +1,4 @@
 import string
-import fileinput
 import sys
 import re
 from optparse import OptionParser
@@ -32,6 +31,7 @@ if options.bool==True:
 			toks = impact.split("|")
 			r_.csq="\t".join([x if x!="" else "." for x in toks])
 			print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,".",r_.uniqid,r_.gene,r_.eamaf,r_.aamaf,r_.maf,r_.csq])
+
 if options.bool==False:
 	class Record1(object):
 		def __init__(self, fields):

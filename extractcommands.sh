@@ -24,33 +24,44 @@ python rearrange2.py $DATA/foo.bed $DATA/alluniq.bed
 sort -k11,11 -k1,1 -k2,2n $DATA/foo.bed | python rearrange3.py $DATA/alldom.bed
 bedtools intersect -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b <(sort -k1,1 -k2,2n $DATA/alluniq.bed) -wa -wb | awk '{ if ($8==$51 && $24==$67) print $0}' | tr -s " " "\t" | cut -f -35 | cat - <(bedtools intersect -v -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b $DATA/alluniq.bed | sort -k1,1 -k2,2n) | sort -k1,1 -k2,2n | python nodom.py $DATA/nodom.bed
 cat $DATA/alluniq.bed $DATA/nodom.bed | sort -k1,1 -k2,2n | cat <(printf "#header for nodoms:\n#chr,start,end,length,info\n#info field contains gene_id, transcript_id, exon_number, gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, near_pfamA_id (if applicable, describes what domain it is near), uniq_id\n#header for domains separated by exon:\n#chr,start,end,length,pfam_database_ver,type_of_sequence,blank_field,strand,blank_field2,info\n#info field contains pfamA_id, gene_name, transcript_id, protein_id, pfamseq_acc, pfamseq_id, pfamA_acc, pfamA_auto_reg, gene_id, matched_transcript_id, expn_number, matched_gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, uniq_id, ccds_id (if applicable)\n") - > $DATA/allregions.bed
-# get a count for variants per domain
+# get MAF and convert from percent to fraction, variant type (FG), gene, domain, chr, start, end, impact, other info for analysis
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alldom.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/domint.bed
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alluniq.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/uniqint.bed
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/allnodom.bed | tr -s " " "\t" | cut -f 1,2,3,9,17 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,9,10,13 | python var.py -n > $DATA/nodomint.bed
 cat $DATA/uniqint.bed $DATA/nodomint.bed | sort -k1,1 -k2,2n | cat <(printf "#chr,start,end,ref,alt,pfamA_id,uniqid,gene_symbol,ea_maf,aa_maf,all_maf,impact,codons,amino_acids,gene_id_csq,gene_symbol_csq,transcript_id_csq,exon_number_csq,polyphen,sift,protein_position,biotype\n") - > $DATA/allint.bed
-# get MAF and convert from percent to fraction, variant type (FG), gene, domain, chr, start, end for analysis
-awk -F";" '{print $1,$2,$3,$8,$21}' $DATA/foo.bed | sed 's/FG=.*://g' | sed 's/MAF=.*,//g' | awk '{print $1,$2,$3,$4,$5,$6,$7,$8/100,$9}' | tr -s " " "\t" | sort -k6,6 > $DATA/allint.bed; rm $DATA/foo.bed
-awk -F";" '{print $1,$2,$3,$8,$21,$23}' $DATA/foo.bed | perl -pe 's/[XN]M_[A-Z0-9.]*?:intron//g' | perl -pe 's/((\S*\s*){7})MAF=.*,(.*)\s*FG=(.*:).*\n/$1$3\n/g'
-#sort counts from bill by domain
+#sort domain occurrence count from bill
 sort -k2,2 $DATA/human_pfam.counts > $DATA/foo.bed; mv $DATA/foo.bed $DATA/human_pfam.counts
-#get total bp for each domain
-cat $DATA/all.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {for (i in arr) {print i,arr[i]}}' | sort -k1,1 > $DATA/sumlist.bed
+#get total bp for each domain, counts
+cat $DATA/alldom.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {for (i in arr) {print i,arr[i]}}' | sort -k1,1 > $DATA/sumlist.bed
+# pick one impact per variant
+sed '1d' $DATA/allint.bed | python formatvar.py > $DATA/allint2.bed
 # make table of counts, non-syn, syn, total var, total bp/exome per domain
-python maketable.py $DATA/allint.bed > $DATA/foo.bed
+sort -k6,6 $DATA/allint2.bed | python maketable.py > $DATA/foo.bed
 python mergetable.py $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed > $DATA/dtable.txt; rm $DATA/foo.bed
+
+alldomint<-read.delim(paste(DATA,"/domint.bed",sep=""),header=FALSE)
+alldomint$V6=gsub(";","",alldomint$V6)
+m<-merge(alldomint,clans,by.x="V6",by.y="pfamA_id",all.x=TRUE)
+write.table(m,paste(DATA,"/alldomsclans.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE)
+
+perl -pe 's/ /\t/g' $DATA/alldom.bed | cut -f -45 > $DATA/foo.bed
+alldom<-read.delim(paste(DATA,"/foo.bed",sep=""),header=FALSE)
+alldom$V11=gsub(";","",alldom$V11)
+m<-merge(alldom,clans,by.x="V11",by.y="pfamA_id",all.x=TRUE)
+write.table(m,paste(DATA,"/alldomsclans.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE)
 
 R commands:
 
 library(ggplot2)
 library(plotrix)
 library(RColorBrewer)
+DATA<-"~/work/data/pmodeldata"
 dtable <- read.delim("~/work/data/pmodeldata/dtable.txt")
 clans <- read.delim("~/work/data/pmodeldata/count_human_pfam_clan.tab")
 m<-merge(dtable,clans,by.x="domain",by.y="pfamA_id")
-write.table(m,paste(DATA,"/clans.txt",sep=""),sep="\t")
+write.table(m,paste(DATA,"/clans.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE)
 echo -e "clan_acc\tclan_id\tnonsynct\tsynct\ttotalvarct\tdomcount\ttotalbp\tmmaf\tdn.ds\tvar.bp.ratio" > $DATA/ctable.txt
-sed '1d' $DATA/clans.txt | sort -k13,13 | bedtools groupby -g 13,14 -c 4,5,6,7,8,9,10,11 -o sum,sum,sum,sum,sum,sum,sum,sum | awk '{printf $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"; if ($4!=0) printf $3/$4; else printf $3/(1+$4); printf "\t"$5/$7"\n"}' >> $DATA/ctable.txt
+sed '1d' $DATA/clans.txt | sort -k12,12 | bedtools groupby -g 12,13 -c 3,4,5,6,7,8,9,10 -o sum,sum,sum,sum,sum,sum,sum,sum | awk '{printf $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"; if ($4!=0) printf $3/$4; else printf $3/(1+$4); printf "\t"$5/$7"\n"}' >> $DATA/ctable.txt
 ctable <- read.delim("~/work/data/pmodeldata/ctable.txt")
 shuffle <-function(list){
 	l<-c()
