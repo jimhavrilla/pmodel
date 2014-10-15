@@ -39,16 +39,24 @@ sed '1d' $DATA/allint.bed | python formatvar.py > $DATA/allint2.bed
 sort -k6,6 $DATA/allint2.bed | python maketable.py > $DATA/foo.bed
 python mergetable.py $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed > $DATA/dtable.txt; rm $DATA/foo.bed
 
-alldomint<-read.delim(paste(DATA,"/domint.bed",sep=""),header=FALSE)
-alldomint$V6=gsub(";","",alldomint$V6)
-m<-merge(alldomint,clans,by.x="V6",by.y="pfamA_id",all.x=TRUE)
-write.table(m,paste(DATA,"/alldomsclans.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE)
+# alldomint<-read.delim(paste(DATA,"/domint.bed",sep=""),header=FALSE)
+# alldomint$V6=gsub(";","",alldomint$V6)
+# m<-merge(alldomint,clans,by.x="V6",by.y="pfamA_id",all.x=TRUE)
+# write.table(m,paste(DATA,"/alldomsclansint.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE)
+# cat <(printf "domain\tchr\tstart\tend\tref\talt\tuniqid\tgene\teamaf\taamaf\tmaf\timpact\tcodon\taminoacid\tgeneid\tgenecsq\ttransid\texonno\tpolyphen\tsift\tproteinpos\tbiotype\tpfamacc\tclanacc\tclanid\tclandomcount\n") <(sed '1d' $DATA/alldomsclansint.txt) > $DATA/foo.txt; mv $DATA/foo.txt $DATA/alldomsclansint.txt
 
-perl -pe 's/ /\t/g' $DATA/alldom.bed | cut -f -45 > $DATA/foo.bed
-alldom<-read.delim(paste(DATA,"/foo.bed",sep=""),header=FALSE)
-alldom$V11=gsub(";","",alldom$V11)
-m<-merge(alldom,clans,by.x="V11",by.y="pfamA_id",all.x=TRUE)
-write.table(m,paste(DATA,"/alldomsclans.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE)
+# perl -pe 's/ /\t/g' $DATA/alldom.bed | cut -f -45 > $DATA/foo.bed
+# alldom<-read.delim(paste(DATA,"/foo.bed",sep=""),header=FALSE)
+# alldom$V11=gsub(";","",alldom$V11)
+# m<-merge(alldom,clans,by.x="V11",by.y="pfamA_id",all.x=TRUE)
+# m<-m[,c(2:11,1,12:49)]
+# write.table(m,paste(DATA,"/alldomsclans.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE)
+# cat <(printf "chr\tstart\tend\tbplength\tdb\tseqtype\tblank\tstrand\tblank\tpfamA_id\tgene_name\ttranscript_id\tprotein_id\tpfamseq_acc\tpfamseq_id\tpfamA_acc\tpfamA_auto_reg\tgene_id\ttranscript_id2\texon_number\tgene_name2\tgene_source\tgene_biotype\ttranscript_name\ttranscript_source\texon_id\tuniq_id\tpfamA_acc\tclan_acc\tclan_id\tdom_cnt\n") <(sed '1d' $DATA/alldomsclans.txt) > $DATA/foo.txt; mv $DATA/foo.txt $DATA/alldomsclans.txt
+
+grep -w "TP53" $DATA/allint2.bed | grep -v "ND" | grep -v "na" > foodom
+perl -pe 's/(.*?\s){14}(.*?)\s(.*?\s){6}(.*?)\s.*\n/$2,$4 /g' foodom | perl -pe 's/(\w)\/?(\w)?,(\d*?)\/\d*/$1$3$2/g' | cat - <(printf "\n")
+
+sed '1d' $DATA/dtable.txt | sort -k2,2 | awk '{gene[$2]+=1; list[$1]=$0; dom[$1]=$2} END {for (i in list) for (j in gene) {if (gene[j]>=3 && j==dom[i]) print list[i]}}' | sort -k2,2 > diverge.txt
 
 R commands:
 
@@ -61,7 +69,7 @@ clans <- read.delim("~/work/data/pmodeldata/count_human_pfam_clan.tab")
 m<-merge(dtable,clans,by.x="domain",by.y="pfamA_id")
 write.table(m,paste(DATA,"/clans.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE)
 echo -e "clan_acc\tclan_id\tnonsynct\tsynct\ttotalvarct\tdomcount\ttotalbp\tmmaf\tdn.ds\tvar.bp.ratio" > $DATA/ctable.txt
-sed '1d' $DATA/clans.txt | sort -k12,12 | bedtools groupby -g 12,13 -c 3,4,5,6,7,8,9,10 -o sum,sum,sum,sum,sum,sum,sum,sum | awk '{printf $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"; if ($4!=0) printf $3/$4; else printf $3/(1+$4); printf "\t"$5/$7"\n"}' >> $DATA/ctable.txt
+sed '1d' $DATA/clans.txt | sort -k12,12 | grep -v -w "NA" | bedtools groupby -g 12,13 -c 3,4,5,6,7,8,9,10 -o sum,sum,sum,sum,sum,sum,sum,sum | awk '{printf $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"; if ($4!=0) printf $3/$4; else printf $3/(1+$4); printf "\t"$5/$7"\n"}' >> $DATA/ctable.txt
 ctable <- read.delim("~/work/data/pmodeldata/ctable.txt")
 shuffle <-function(list){
 	l<-c()
@@ -120,12 +128,15 @@ sturges <- function(m=t(dtable["mmaf"]),column="mmaf"){
 		widthlist[length(widthlist)+1] <- tot+w
 		tot <- tot+w
 	}
-	if (tot => max(m)){
+	if (tot >= max(m)){
 		return(widthlist)
 	}
 }
-subplot <- function(i=dtable,yll=0,yul=3,pchcolumn="totalvarct",colorcolumn="mmaf",nbin=6,x="dn.ds",y="domcount",xlab="dn/ds",ylab="domain occurrences in exome",ylimiter="domcount",label="domain",labelbool=TRUE,colorbool=TRUE,pchbool=TRUE,limitbool=TRUE){
-	if (limitbool==TRUE){
+subplot <- function(i=dtable,xll=0,xul=6,yll=0,yul=3,pchcolumn="totalvarct",colorcolumn="mmaf",nbin=6,x="dn.ds",y="domcount",xlab="dn/ds",ylab="domain occurrences in exome",xlimiter="dn.ds",ylimiter="domcount",label="domain",labelbool=TRUE,colorbool=TRUE,pchbool=TRUE,xlimitbool=TRUE,ylimitbool=TRUE){
+	if (xlimitbool==TRUE){
+		i=i[xll<i[xlimiter] & i[xlimiter]<=xul,]
+	}
+	if (ylimitbool==TRUE){
 		i=i[yll<i[ylimiter] & i[ylimiter]<=yul,]
 	}
 	if (colorbool==TRUE){
@@ -140,12 +151,16 @@ subplot <- function(i=dtable,yll=0,yul=3,pchcolumn="totalvarct",colorcolumn="mma
 	pchleg<-l[3][[1]]
 	# par(fig=c(0.1,0.9,0,0.9),new=TRUE)
 	plot(t(i[x]),t(i[y]),xlab=xlab,ylab=ylab,pch=pch,col=col)
-	if (labelbool == TRUE){
+	if (labelbool==TRUE){
 		text(t(i[x]),t(i[y]),labels=t(i[label]),adj=c(.5,-.4),cex=0.5,offset=0.5)
 	}
 	# par(fig=c(0,.1,.3,.5),xpd=NA)
-	color.legend((max(i[x])-min(i[x]))*.985+min(i[x]),(max(i[y])-min(i[y]))*.75+min(i[y]),max(i[x]),max(i[y]),legend=w,rect.col=c,gradient="y")
-	legend(par()$usr[1],mean(par()$usr[3:4]),border=rep("white",nbin),legend=pchleg,pch=seq(0,nbin-1),bty="n",xpd=TRUE,xjust=0,yjust=0.5,cex=0.65) #inset=c(0,0) #min(i[x]),(max(i[y])-min(i[y]))*.75+min(i[y]),(max(i[x])-min(i[x]))*.05+min(i[x]),max(i[y])
+	if (colorbool==TRUE){
+		color.legend((max(i[x])-min(i[x]))*.985+min(i[x]),(max(i[y])-min(i[y]))*.75+min(i[y]),max(i[x]),max(i[y]),legend=w,rect.col=c,gradient="y")
+	}
+	if (pchbool==TRUE){
+		legend(par()$usr[1],mean(par()$usr[3:4]),border=rep("white",nbin),legend=pchleg,pch=seq(0,nbin-1),bty="n",xpd=TRUE,xjust=0,yjust=0.5,cex=0.65) #inset=c(0,0) #min(i[x]),(max(i[y])-min(i[y]))*.75+min(i[y]),(max(i[x])-min(i[x]))*.05+min(i[x]),max(i[y])
+	}
 }
 plot(table$var.bp.ratio,log(table$totalbp,base=10),xlab="variants/total length of domain",ylab="total length of domain (log)",cex=cex,col=col)
 color.legend(.10,3,.14,5,legend=w,rect.col=c,gradient="y")
