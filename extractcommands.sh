@@ -28,6 +28,7 @@ cat $DATA/alluniq.bed $DATA/nodom.bed | sort -k1,1 -k2,2n | cat <(printf "#heade
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alldom.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/domint.bed
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alluniq.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/uniqint.bed
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/allnodom.bed | tr -s " " "\t" | cut -f 1,2,3,9,17 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,9,10,13 | python var.py -n > $DATA/nodomint.bed
+####NEW####bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alluniq.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b <(gzcat ~/Downloads/ExAC.r0.1.sites.vep.vcf.gz) -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py > foodom
 cat $DATA/uniqint.bed $DATA/nodomint.bed | sort -k1,1 -k2,2n | cat <(printf "#chr,start,end,ref,alt,pfamA_id,uniqid,gene_symbol,ea_maf,aa_maf,all_maf,impact,codons,amino_acids,gene_id_csq,gene_symbol_csq,transcript_id_csq,exon_number_csq,polyphen,sift,protein_position,biotype\n") - > $DATA/allint.bed
 #sort domain occurrence count from bill
 sort -k2,2 $DATA/human_pfam.counts > $DATA/foo.bed; mv $DATA/foo.bed $DATA/human_pfam.counts
@@ -57,6 +58,7 @@ grep -w "TP53" $DATA/allint2.bed | grep -v "ND" | grep -v "na" > foodom
 perl -pe 's/(.*?\s){14}(.*?)\s(.*?\s){6}(.*?)\s.*\n/$2,$4 /g' foodom | perl -pe 's/(\w)\/?(\w)?,(\d*?)\/\d*/$1$3$2/g' | cat - <(printf "\n")
 
 sed '1d' $DATA/dtable.txt | sort -k2,2 | awk '{gene[$2]+=1; list[$1]=$0; dom[$1]=$2} END {for (i in list) for (j in gene) {if (gene[j]>=3 && j==dom[i]) print list[i]}}' | sort -k2,2 > diverge.txt
+cut -f 1,2,6,7,9 diverge.txt | sort -k2,2 | bedtools groupby -g 2 -c 1,1,5,5,5,3,4,5 -o collapse,count_distinct,min,max,stdev,sum,sum,collapse | awk '$5 < 5' | sort -k6,6nr | awk '{gene[$1]=$6*($5-$4)*$8/$7; row[$1]=$0} END {for (i in gene) for (j in gene) {if (gene[i]>=gene[j]) rank[i]+=1}} END {for (i in rank) print row[i],gene[i],rank[i]/NR}' | sort -k11,11nr | less
 
 R commands:
 
