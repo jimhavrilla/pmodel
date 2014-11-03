@@ -19,6 +19,7 @@ class Record1(object):
 		self.transid2 = fields[28]
 		self.uniqid = fields[44].rstrip(';')
 		self.autoreg = fields[24]
+		self.gene = fields[12]
 
 # class Record2(object):
 # 	def __init__(self,fields):

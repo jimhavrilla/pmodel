@@ -4,6 +4,7 @@ import sys
 import fileinput
 import numpy
 import warnings
+from sets import Set
 
 class Record3(object):
 	def __init__(self, fields):
@@ -22,21 +23,25 @@ class Record3(object):
 		self.type = fields[12]
 		self.info = fields[13:23]
 
-def count(old_r,mmaf,ct,nct,sct):
+def count(old_r,mmaf,ct,nct,sct,geneset):
 	with warnings.catch_warnings(): #catches NaN warnings and empty slices
 		warnings.simplefilter("ignore")
 		mmaf=numpy.median(mmaf)
+	foo=''
+	for x in geneset:
+		foo=foo+x+","
+	foo=foo.rstrip(",")
 	try:
-		sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct),2)),str(mmaf)])+"\n")
+		sys.stdout.write("\t".join([old_r.domain,foo,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct),2)),str(mmaf)])+"\n")
 	except ZeroDivisionError:
-		sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct+1),2)),str(mmaf)])+"\n")
+		sys.stdout.write("\t".join([old_r.domain,foo,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct+1),2)),str(mmaf)])+"\n")
 	ct=0
 	nct=0
 	sct=0
 	mmaf=[]
 	return [mmaf,ct,nct,sct]
 
-
+geneset = Set([])
 ct=0
 nct=0
 sct=0
@@ -45,6 +50,7 @@ old_r=None
 for line in fileinput.input():
 	fields=line.rstrip().split("\t")
 	r_=Record3(fields)
+	geneset.add(r_.gene)
 	if r_.type=="ds":
 		sct=sct+1
 		ct=ct+1
@@ -54,11 +60,12 @@ for line in fileinput.input():
 		ct=ct+1
 		mmaf.append(r_.maf)
 	if old_r!=None and old_r.domain != r_.domain:
-		[mmaf,ct,nct,sct]=count(old_r,mmaf,ct,nct,sct)
+		[mmaf,ct,nct,sct]=count(old_r,mmaf,ct,nct,sct,geneset)
+		geneset.clear()
 	
 	old_r=r_
 
-count(r_,mmaf,ct,nct,sct)
+count(r_,mmaf,ct,nct,sct,geneset)
 
 
 # for line in fileinput.input():

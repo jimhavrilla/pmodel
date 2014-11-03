@@ -31,7 +31,7 @@ sys.stdout.write("\t".join(["domain","gene","nonsynct","synct","totalvarct","dom
 while table and count and totsum:
 	a=RecordA(table.split("\t"))
 	b=RecordB(count.split("\t"))
-	c=RecordC(totsum.split(";"))
+	c=RecordC(totsum.split(" "))
 	if a.domain<b.domain:
 		table=f1.readline()
 		a=RecordA(table.split("\t"))
@@ -43,13 +43,13 @@ while table and count and totsum:
 		a=RecordA(table.split("\t"))
 	if a.domain>c.domain:
 		totsum=f3.readline()
-		c=RecordC(totsum.split(";"))
+		c=RecordC(totsum.split(" "))
 	if b.domain<c.domain:
 		count=f2.readline()
 		b=RecordB(count.split("\t"))
 	if b.domain>c.domain:
 		totsum=f3.readline()
-		c=RecordC(totsum.split(";"))
+		c=RecordC(totsum.split(" "))
 	if a.domain==b.domain==c.domain:
 		print "\t".join([a.domain,a.gene,a.nonsynct,a.synct,a.totalct,b.count,c.totalbp,a.mmaf,a.dnds,str(float(a.totalct)/float(c.totalbp))])
 		table=f1.readline()

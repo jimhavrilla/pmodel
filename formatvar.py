@@ -64,10 +64,11 @@ for line in sys.stdin:
 		d_=judge_impact(impact_list)
 		for x in d_.values():
 			print "\t".join([old_r.chr,old_r.start,old_r.end,old_r.ref,old_r.alt,old_r.domain,old_r.uniqid,old_r.gene,old_r.eamaf,old_r.aamaf,old_r.maf])+'\t'+x
-
+		impact_list=[]
 	old_r=r_
 	old_c=c_
 
 impact_list.append(old_c)
 d=judge_impact(impact_list)
-print "\t".join([old_r.chr,old_r.start,old_r.end,old_r.ref,old_r.alt,old_r.domain,old_r.uniqid,old_r.gene,old_r.eamaf,old_r.aamaf,old_r.maf])+"\t"+d_.impact+"\t"+d_.type+"\t"+"\t".join(d_.info)
+for x in d_.values():
+			print "\t".join([old_r.chr,old_r.start,old_r.end,old_r.ref,old_r.alt,old_r.domain,old_r.uniqid,old_r.gene,old_r.eamaf,old_r.aamaf,old_r.maf])+'\t'+x

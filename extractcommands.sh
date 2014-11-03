@@ -19,15 +19,16 @@ done
 cat $DATA/chr*.bed | sort -k1,1 -k2,2n > $DATA/all.bed
 rm $DATA/chr*
 # remove utrs and introns
-bedtools intersect -a $DATA/all.bed -b $DATA/GRCh37.bed -wb | awk {'print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$17'} FS='\t' OFS='\t' | perl uniq.pl | tr -s " " "\t" | sort -k45,45 -k1,1 -k2,2n > $DATA/foo.bed
+bedtools intersect -a $DATA/all.bed -b $DATA/GRCh37.bed -wb | awk {'print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$17'} FS='\t' OFS='\t' | perl uniq.pl | perl -pe 's/"|;//g' > $DATA/foo.bed
+awk 'NR==FNR{a[$3];next}$15 in a{print $0}' /Users/jmh2tt/work/data/pmodeldata/appris_data.principal.txt $DATA/foo.bed | tr -s " " "\t" | sort -k45,45 -k1,1 -k2,2n > $DATA/blah.txt; mv $DATA/blah.txt $DATA/foo.bed
 python rearrange2.py $DATA/foo.bed $DATA/alluniq.bed
 sort -k11,11 -k1,1 -k2,2n $DATA/foo.bed | python rearrange3.py $DATA/alldom.bed
-bedtools intersect -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b <(sort -k1,1 -k2,2n $DATA/alluniq.bed) -wa -wb | awk '{ if ($8==$51 && $24==$67) print $0}' | tr -s " " "\t" | cut -f -35 | cat - <(bedtools intersect -v -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b $DATA/alluniq.bed | sort -k1,1 -k2,2n) | sort -k1,1 -k2,2n | python nodom.py $DATA/nodom.bed
+bedtools intersect -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b <(sort -k1,1 -k2,2n $DATA/alluniq.bed) -wa -wb | perl -pe 's/"|;//g' | awk '{ if ($8==$51 && $24==$67) print $0}' | tr -s " " "\t" | cut -f -35 | cat - <(bedtools intersect -v -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b $DATA/alluniq.bed | sort -k1,1 -k2,2n) | sort -k1,1 -k2,2n | python nodom.py $DATA/nodom.bed
 cat $DATA/alluniq.bed $DATA/nodom.bed | sort -k1,1 -k2,2n | cat <(printf "#header for nodoms:\n#chr,start,end,length,info\n#info field contains gene_id, transcript_id, exon_number, gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, near_pfamA_id (if applicable, describes what domain it is near), uniq_id\n#header for domains separated by exon:\n#chr,start,end,length,pfam_database_ver,type_of_sequence,blank_field,strand,blank_field2,info\n#info field contains pfamA_id, gene_name, transcript_id, protein_id, pfamseq_acc, pfamseq_id, pfamA_acc, pfamA_auto_reg, gene_id, matched_transcript_id, expn_number, matched_gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, uniq_id, ccds_id (if applicable)\n") - > $DATA/allregions.bed
 # get MAF and convert from percent to fraction, variant type (FG), gene, domain, chr, start, end, impact, other info for analysis
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alldom.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/domint.bed
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alluniq.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/uniqint.bed
-bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/allnodom.bed | tr -s " " "\t" | cut -f 1,2,3,9,17 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,9,10,13 | python var.py -n > $DATA/nodomint.bed
+bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/nodom.bed | tr -s " " "\t" | cut -f 1,2,3,9,17 ) -b $DATA/VEPESPALL.vcf -sorted -wb | cut -f 1,2,3,4,5,9,10,13 | python var.py -n > $DATA/nodomint.bed
 ####NEW####bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alluniq.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b <(gzcat ~/Downloads/ExAC.r0.1.sites.vep.vcf.gz) -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py > foodom
 cat $DATA/uniqint.bed $DATA/nodomint.bed | sort -k1,1 -k2,2n | cat <(printf "#chr,start,end,ref,alt,pfamA_id,uniqid,gene_symbol,ea_maf,aa_maf,all_maf,impact,codons,amino_acids,gene_id_csq,gene_symbol_csq,transcript_id_csq,exon_number_csq,polyphen,sift,protein_position,biotype\n") - > $DATA/allint.bed
 #sort domain occurrence count from bill
@@ -35,7 +36,7 @@ sort -k2,2 $DATA/human_pfam.counts > $DATA/foo.bed; mv $DATA/foo.bed $DATA/human
 #get total bp for each domain, counts
 cat $DATA/alldom.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {for (i in arr) {print i,arr[i]}}' | sort -k1,1 > $DATA/sumlist.bed
 # pick one impact per variant
-sed '1d' $DATA/allint.bed | python formatvar.py > $DATA/allint2.bed
+awk 'NR==FNR{a[$3];next}$17 in a{print $0}' $DATA/appris_data.principal.txt <(sed '1d' $DATA/allint.bed) | python formatvar.py > $DATA/allint2.bed
 # make table of counts, non-syn, syn, total var, total bp/exome per domain
 sort -k6,6 $DATA/allint2.bed | python maketable.py > $DATA/foo.bed
 python mergetable.py $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed > $DATA/dtable.txt; rm $DATA/foo.bed
@@ -56,9 +57,10 @@ python mergetable.py $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed > $
 
 grep -w "TP53" $DATA/allint2.bed | grep -v "ND" | grep -v "na" > foodom
 perl -pe 's/(.*?\s){14}(.*?)\s(.*?\s){6}(.*?)\s.*\n/$2,$4 /g' foodom | perl -pe 's/(\w)\/?(\w)?,(\d*?)\/\d*/$1$3$2/g' | cat - <(printf "\n")
+lollipops TP53 list 
+convert TP53.svg TP53.png
 
-sed '1d' $DATA/dtable.txt | sort -k2,2 | awk '{gene[$2]+=1; list[$1]=$0; dom[$1]=$2} END {for (i in list) for (j in gene) {if (gene[j]>=3 && j==dom[i]) print list[i]}}' | sort -k2,2 > diverge.txt
-cut -f 1,2,6,7,9 diverge.txt | sort -k2,2 | bedtools groupby -g 2 -c 1,1,5,5,5,3,4,5 -o collapse,count_distinct,min,max,stdev,sum,sum,collapse | awk '$5 < 5' | sort -k6,6nr | awk '{gene[$1]=$6*($5-$4)*$8/$7; row[$1]=$0} END {for (i in gene) for (j in gene) {if (gene[i]>=gene[j]) rank[i]+=1}} END {for (i in rank) print row[i],gene[i],rank[i]/NR}' | sort -k11,11nr | less
+sed '1d' $DATA/dtable.txt | python diverge.py | awk '{if ($3>=3) print $0}' | awk '{gene[$1]=$10; row[$1]=$0} END {for (i in gene) for (j in gene) {if (gene[i]>=gene[j]) rank[i]+=1}} END {for (i in rank) print row[i],rank[i]/NR}' | sort -k11,11nr  > diverge.txt
 
 R commands:
 
@@ -164,5 +166,15 @@ subplot <- function(i=dtable,xll=0,xul=6,yll=0,yul=3,pchcolumn="totalvarct",colo
 		legend(par()$usr[1],mean(par()$usr[3:4]),border=rep("white",nbin),legend=pchleg,pch=seq(0,nbin-1),bty="n",xpd=TRUE,xjust=0,yjust=0.5,cex=0.65) #inset=c(0,0) #min(i[x]),(max(i[y])-min(i[y]))*.75+min(i[y]),(max(i[x])-min(i[x]))*.05+min(i[x]),max(i[y])
 	}
 }
-plot(table$var.bp.ratio,log(table$totalbp,base=10),xlab="variants/total length of domain",ylab="total length of domain (log)",cex=cex,col=col)
+plot(dtable$var.bp.ratio,log(dtable$totalbp,base=10),xlab="variants/total length of domain",ylab="total length of domain (log)",cex=cex,col=col)
 color.legend(.10,3,.14,5,legend=w,rect.col=c,gradient="y")
+
+f<-dtable[order(-dtable$dn.ds),]
+l<-f[f$dn.ds<6]
+plot(l$dn.ds,ylab="dn/ds")
+text(l$dn.ds,labels=l$domain,cex=.5,pos=4,srt=45)
+
+f<-ctable[order(-ctable$dn.ds),]
+l<-f[f$dn.ds<6,]
+plot(l$dn.ds,ylab="dn/ds")
+text(l$dn.ds,labels=l$clan_id,cex=.5,pos=4,srt=45)
