@@ -4,7 +4,6 @@ import sys
 import fileinput
 import numpy
 import warnings
-from sets import Set
 
 class Record3(object):
 	def __init__(self, fields):
@@ -16,89 +15,64 @@ class Record3(object):
 		self.domain = fields[5].rstrip(";").strip("\"")
 		self.uniqid = fields[6]
 		self.gene = fields[7]
-		self.eamaf = float(fields[8])
-		self.aamaf = float(fields[9])
-		self.maf = float(fields[10])
-		self.impact = fields[11]
-		self.type = fields[12]
-		self.info = fields[13:23]
+		self.maf = float(fields[8])
+		self.impact = fields[9]
+		self.type = fields[10]
+		self.info = fields[11:21]
 
-def count(old_r,mmaf,ct,nct,sct,geneset):
+def ratiocalc(nct,sct):
+	try:
+		ns=round(float(nct)/float(sct),2)
+	except ZeroDivisionError:
+		ns=round(float(nct)/float(sct+1),2)
+
+	return ns
+
+def count(old_r,maf,ct,tnct,tsct,geneset):
 	with warnings.catch_warnings(): #catches NaN warnings and empty slices
 		warnings.simplefilter("ignore")
-		mmaf=numpy.median(mmaf)
+		mmaf=numpy.median(maf)
 	foo=''
 	for x in geneset:
 		foo=foo+x+","
 	foo=foo.rstrip(",")
-	try:
-		sys.stdout.write("\t".join([old_r.domain,foo,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct),2)),str(mmaf)])+"\n")
-	except ZeroDivisionError:
-		sys.stdout.write("\t".join([old_r.domain,foo,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct+1),2)),str(mmaf)])+"\n")
+	sys.stdout.write("\t".join([old_r.domain,foo,str(ct),str(ratiocalc(tnct,tsct)),str(mmaf)])+"\n")
 	ct=0
-	nct=0
-	sct=0
-	mmaf=[]
-	return [mmaf,ct,nct,sct]
+	tnct=0
+	tsct=0
+	maf=[]
+	return [maf,mmaf,ct,nct,sct]
 
-geneset = Set([])
+geneset = set([])
 ct=0
 nct=0
 sct=0
-mmaf=[]
+tnct=0
+tsct=0
+maf=[]
+dnds=[]
 old_r=None
 for line in fileinput.input():
 	fields=line.rstrip().split("\t")
 	r_=Record3(fields)
-	geneset.add(r_.gene)
 	if r_.type=="ds":
 		sct=sct+1
+		tsct=tsct+1
 		ct=ct+1
-		mmaf.append(r_.maf)
+		maf.append(r_.maf)
 	if r_.type=="dn":
 		nct=nct+1
+		tnct=tnct+1
 		ct=ct+1
-		mmaf.append(r_.maf)
+		maf.append(r_.maf)
+	if r_.gene not in geneset:
+		dnds.append(ratiocalc(nct,sct))
+		nct=0;sct=0
+		geneset.add(r_.gene)
 	if old_r!=None and old_r.domain != r_.domain:
-		[mmaf,ct,nct,sct]=count(old_r,mmaf,ct,nct,sct,geneset)
+		[maf,mmaf,ct,tnct,tsct]=count(old_r,maf,ct,tnct,tsct,geneset)
 		geneset.clear()
 	
 	old_r=r_
 
-count(r_,mmaf,ct,nct,sct,geneset)
-
-
-# for line in fileinput.input():
-# 	fields=line.rstrip().split("\t")
-# 	try:
-# 		old_r=r_
-# 	except NameError:
-# 		pass
-# 	r_=Record3(fields)
-# 	try:
-# 		if old_r.domain != r_.domain:
-# 			with warnings.catch_warnings(): #catches NaN warnings and empty slices
-# 				warnings.simplefilter("ignore")
-# 				mmaf=numpy.median(mmaf)
-# 			if ct==0:
-# 				mmaf=[]
-# 				continue
-# 			try:
-# 				sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct),2)),str(mmaf)])+"\n")
-# 			except ZeroDivisionError:
-# 				sys.stdout.write("\t".join([old_r.domain,old_r.gene,str(nct),str(sct),str(ct),str(round(float(nct)/float(sct+1),2)),str(mmaf)])+"\n")
-# 			ct=0
-# 			nct=0
-# 			sct=0
-# 			mmaf=[]
-# 			continue
-# 	except NameError:
-# 		pass
-# 	if r_.type=="ds":
-# 		sct=sct+1
-# 		ct=ct+1
-# 		mmaf.append(r_.maf)
-# 	if r_.type=="dn":
-# 		nct=nct+1
-# 		ct=ct+1
-# 		mmaf.append(r_.maf)
+count(r_,maf,ct,tnct,tsct,geneset)

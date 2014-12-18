@@ -35,7 +35,7 @@ for line in sys.stdin:
 			foo[8]=min(foo[7])
 			foo[9]=max(foo[7])
 			foo[10]=std(foo[7])
-			foo[11]=(foo[9]-foo[8])*foo[10]*foo[4]/foo[6] #(max-min)*stdev*bp/domcount
+			foo[11]=(foo[9]-foo[8])*foo[10]*foo[4]*foo[6]/100 #(max-min)*stdev*bp*domcount/100
 			gene[x]=foo
 		except KeyError:
 			gene[x]=[x,set([r_.domain]),1,[int(r_.bp)],0,[int(r_.domcount)],0,[float(r_.dnds)],0,0,0,0]
