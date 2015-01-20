@@ -47,8 +47,9 @@ GENE="FLG"; MAF=0.01
 bash geneplot.sh $GENE $MAF $DATA
 
 # make table of counts, non-syn, syn, total var, total bp/exome per domain
-python dg.py $DATA/allint2.bed > $DATA/dgpair.txt
-cat $DATA/allint2.bed | python maketable.py > $DATA/foo.bed
+python dg.py $DATA/allint2.bed $DATA/dngpair.txt
+grep -v -w "\." $DATA/dngpair.txt > $DATA/dgpair.txt
+python maketable.py $DATA/allint2.bed > $DATA/foo.bed
 python mergetable.py -f $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed > $DATA/dtable.txt; rm $DATA/foo.bed
 
 # alldomint<-read.delim(paste(DATA,"/domint.bed",sep=""),header=FALSE)

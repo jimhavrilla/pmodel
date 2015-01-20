@@ -1,7 +1,6 @@
 # maketable.py - to make a table for counts vs. dn/ds plot and bp vs. var/bp plot
 import string
 import sys
-import fileinput
 import numpy
 import warnings
 
@@ -36,13 +35,14 @@ def count(old_r,maf,ct,tnct,tsct,geneset):
 	for x in geneset:
 		foo=foo+x+","
 	foo=foo.rstrip(",")
-	sys.stdout.write("\t".join([old_r.domain,foo,str(ct),str(ratiocalc(tnct,tsct)),str(mmaf)])+"\n")
+	sys.stdout.write("\t".join([old_r.domain,foo,str(tnct),str(tsct),str(ct),str(ratiocalc(tnct,tsct)),str(mmaf)])+"\n")
 	ct=0
 	tnct=0
 	tsct=0
 	maf=[]
 	return [maf,mmaf,ct,nct,sct]
 
+f1=open(sys.argv[1])
 geneset = set([])
 ct=0
 nct=0
@@ -52,7 +52,7 @@ tsct=0
 maf=[]
 dnds=[]
 old_r=None
-for line in fileinput.input():
+for line in f1:
 	fields=line.rstrip().split("\t")
 	r_=Record3(fields)
 	if r_.type=="ds":

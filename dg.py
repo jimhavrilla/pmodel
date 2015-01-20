@@ -1,5 +1,4 @@
 # dg.py - 
-from __future__ import print_function
 import string
 import sys
 import numpy
@@ -73,7 +72,7 @@ for x in table:
 		for y in xlist:
 			if s==0.0:
 				s=1.0
-			print("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6]])+"\n",file=f2)
+			f2.write("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6],"\n"])) #domain, gene, ct, nct, sct, dn/ds, z-score, mmaf
 		xlist=[]
 	xlist.append(x)
 	old_x=x
@@ -84,4 +83,4 @@ s=numpy.std(l)
 for y in xlist:
 	if s==0.0:
 		s=l[0]
-		print("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6]])+"\n",file=f2)
+		f2.write("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6],"\n"]))
