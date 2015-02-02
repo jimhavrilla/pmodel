@@ -3,8 +3,18 @@ import string
 import sys
 import numpy
 import warnings
+from argparse import ArgumentParser
 
-class Record3(object):
+parser = ArgumentParser()
+parser.add_argument("--domcount","-d",help="default=>0 domcount",default=0,type=int)
+parser.add_argument("--bp","-b",help="default=>0 bp",default=0,type=int)
+parser.add_argument("--files","-f",help="three files, the maketable results, the pfam domain counts, and the sum of bp for each domain",nargs=4,default=['allint2.bed','human_pfam.counts','sumlist.bed','dngpair.txt'],type=str)
+args=parser.parse_args()
+
+dpar=args.domcount
+bpar=args.bp
+
+class RecordA(object):
 	def __init__(self, fields):
 		self.chr = fields[0]
 		self.start = fields[1]
@@ -18,6 +28,15 @@ class Record3(object):
 		self.impact = fields[9]
 		self.type = fields[10]
 		self.info = fields[11:21]
+class RecordB(object):
+	def __init__(self,fields):
+		self.pfamacc = fields[0]
+		self.domain = fields[1]
+		self.count = fields[2].strip()
+class RecordC(object):
+	def __init__(self,fields):
+		self.domain = fields[0].strip("\"")
+		self.totalbp = fields[1].strip()
 
 def ratiocalc(nct,sct):
 	try:
@@ -40,10 +59,10 @@ sct=0
 maf=[]
 table=[]
 old_r=None
-f1=open(sys.argv[1],"r")
+f1=open(args.files[0],"r");f2=open(args.files[1],"r");f3=open(args.files[2],"r")
 for line in f1:
 	fields=line.rstrip().split("\t")
-	r_=Record3(fields)
+	r_=RecordA(fields)
 	if old_r!=None and old_r.gene!=r_.gene: # assumes data is sorted by domain then gene, which it should be
 		count(old_r,maf,ct,nct,sct)
 		nct=0;sct=0;ct=0;
@@ -61,7 +80,53 @@ for line in f1:
 
 count(r_,maf,ct,nct,sct)
 
-f2=open(sys.argv[2],"w")
+i=0
+count=f2.readline()
+totsum=f3.readline()
+
+while count and totsum:
+	a=table[i][0]
+	b=RecordB(count.split("\t"))
+	c=RecordC(totsum.split(" "))
+	if a<b.domain:
+		i=i+1
+		a=table[i][0]
+	if a>b.domain:
+		count=f2.readline()
+		b=RecordB(count.split("\t"))
+	if a<c.domain:
+		i=i+1
+		a=table[i][0]
+	if a>c.domain:
+		totsum=f3.readline()
+		c=RecordC(totsum.split(" "))
+	if b.domain<c.domain:
+		count=f2.readline()
+		b=RecordB(count.split("\t"))
+	if b.domain>c.domain:
+		totsum=f3.readline()
+		c=RecordC(totsum.split(" "))
+	if a==b.domain==c.domain:
+		if int(b.count) < dpar:
+			count=f2.readline()
+			continue
+		if int(c.totalbp) < bpar:
+			totsum=f3.readline()
+			continue
+		table[i].extend((b.count,c.totalbp))
+		try:
+			while table[i+1][0]==a:
+				i=i+1
+				table[i].append(b.count)
+				table[i].append(c.totalbp)
+			else:
+				i=i+1
+				count=f2.readline()
+				totsum=f3.readline()
+		except IndexError:
+			break
+
+f4=open(args.files[3],"w")
 xlist=[]
 old_x=None #x[0] domain, x[1] gene, x[2] ct, x[3] nct, x[4] sct, x[5] dn/ds, x[6] mmaf
 for x in table:
@@ -72,7 +137,12 @@ for x in table:
 		for y in xlist:
 			if s==0.0:
 				s=1.0
-			f2.write("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6],"\n"])) #domain, gene, ct, nct, sct, dn/ds, z-score, mmaf
+			if len(y)<8 and bpar==0 and dpar==0:
+				f4.write("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6],"0","0","\n"])) #nodom, gene, ct, nct, sct, dn/ds, z-score, mmaf
+			elif len(y)<8 and (bpar>0 or dpar>0):
+				continue
+			else:
+				f4.write("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6],y[7],y[8],"\n"])) #domain, gene, ct, nct, sct, dn/ds, z-score, mmaf, domcount, totalbp
 		xlist=[]
 	xlist.append(x)
 	old_x=x
@@ -83,4 +153,9 @@ s=numpy.std(l)
 for y in xlist:
 	if s==0.0:
 		s=l[0]
-		f2.write("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6],"\n"]))
+		if len(y)<8 and bpar==0 and dpar==0:
+			f4.write("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6],"0","0","\n"])) #nodom, gene, ct, nct, sct, dn/ds, z-score, mmaf
+		elif len(y)<8 and (bpar>0 or dpar >0):
+			continue
+		else:
+			f4.write("\t".join([y[0],y[1],y[2],y[3],y[4],str(y[5]),str((y[5]-m)/s),y[6],y[7],y[8],"\n"])) #domain, gene, ct, nct, sct, dn/ds, z-score, mmaf, domcount, totalbp

@@ -39,18 +39,41 @@ sort -k2,2 $DATA/human_pfam.counts > $DATA/foo.bed; mv $DATA/foo.bed $DATA/human
 # get total bp for each domain, counts
 cat $DATA/alldom.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {for (i in arr) {print i,arr[i]}}' | sort -k1,1 > $DATA/sumlist.bed
 # make db for queries AND filter variants by canonical transcripts
-bash lollipop.sh $DATA/lolli.db <(awk 'NR==FNR{a[$3];next}$15 in a{print $0}' $DATA/appris_data.principal.txt <(sed '1d' $DATA/allint.bed)) 
+bash makedb.sh $DATA/var.db <(awk 'NR==FNR{a[$3];next}$15 in a{print $0}' $DATA/appris_data.principal.txt <(sed '1d' $DATA/allint.bed)) 
 # pick one impact per variant
-bash query.sh $DATA/lolli.db '%' 0 | python formatvar.py | sort -k6,6 -k8,8 > $DATA/allint2.bed
+bash query.sh $DATA/var.db '%' g 0 | python formatvar.py | sort -k6,6 -k8,8 > $DATA/allint2.bed
 # do variant analysis by gene and maf (filters out entries that are "na," i.e, not dn or ds)
-GENE="FLG"; MAF=0.01
-bash geneplot.sh $GENE $MAF $DATA
+GENE="FLG"; MOD=g; MAF1=0.01
+bash lollipop.sh $DATA $GENE $MOD $MAF1
 
 # make table of counts, non-syn, syn, total var, total bp/exome per domain
-python dg.py $DATA/allint2.bed $DATA/dngpair.txt
-grep -v -w "\." $DATA/dngpair.txt > $DATA/dgpair.txt
 python maketable.py $DATA/allint2.bed > $DATA/foo.bed
 python mergetable.py -f $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed > $DATA/dtable.txt; rm $DATA/foo.bed
+
+# divergence by domain table
+sed '1d' $DATA/dtablemaf.g.01-.txt | awk '{if ($6>0) print $0}' | python diverge.py -d | awk '{if ($3>3) print $0}' | awk '{gene[$1]=$10; row[$1]=$0} END {for (i in gene) for (j in gene) {if (gene[i]>=gene[j]) rank[i]+=1}} END {for (i in rank) print row[i],rank[i]/NR}' | tr -s " " "\t" | sort -k11,11nr  > $DATA/diverge.01.txt
+
+# make table by gene/domain pairing
+
+python dg.py -f $DATA/allint2.bed $DATA/human_pfam.counts $DATA/sumlist.bed $DATA/dngpair.txt
+grep -v -w "\." $DATA/dngpair.txt > $DATA/dgpair.txt
+
+## to compare with RVIS and other scores for divergence
+
+awk '{if ($6>0) print $0}' $DATA/dgpair.txt | python diverge.py -p | awk '{if ($3>3) print $0}' | awk '{gene[$1]=$11; row[$1]=$0} END {for (i in gene) for (j in gene) {if (gene[i]>=gene[j]) rank[i]+=1}} END {for (i in rank) print row[i],rank[i]/NR}' | tr -s " " "\t" | sort -k11,11nr  > $DATA/diverge.pair.txt
+
+#turn XLS supplement from RVIS paper into tab-delimited $DATA/rvis.txt with RVIS scores/percentiles
+
+DATA<-"~/work/data/pmodeldata"
+diverge <- read.delim(paste(DATA,"/diverge.pair.txt",sep=""),header=FALSE)
+y=diverge[diverge["V11"]>=1,][,c("V1","V3","V6","V10","V11","V12")]
+write.table(y,paste(DATA,"/dps.pair.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE,col.names=FALSE)
+
+#in unix use awk NR==FNR to get rows with RVIS scores/percentiles for each gene
+
+awk 'NR==FNR{a[$1]=$3;next}$1 in a{print $0,a[$1]}' OFS='\t' $DATA/rvis.txt $DATA/dps.pair.txt | sort -k7,7 > RVISint.txt
+
+##
 
 # alldomint<-read.delim(paste(DATA,"/domint.bed",sep=""),header=FALSE)
 # alldomint$V6=gsub(";","",alldomint$V6)
@@ -65,8 +88,6 @@ python mergetable.py -f $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed 
 # m<-m[,c(2:11,1,12:49)]
 # write.table(m,paste(DATA,"/alldomsclans.txt",sep=""),sep="\t",row.names=FALSE,quote=FALSE)
 # cat <(printf "chr\tstart\tend\tbplength\tdb\tseqtype\tblank\tstrand\tblank\tpfamA_id\tgene_name\ttranscript_id\tprotein_id\tpfamseq_acc\tpfamseq_id\tpfamA_acc\tpfamA_auto_reg\tgene_id\ttranscript_id2\texon_number\tgene_name2\tgene_source\tgene_biotype\ttranscript_name\ttranscript_source\texon_id\tuniq_id\tpfamA_acc\tclan_acc\tclan_id\tdom_cnt\n") <(sed '1d' $DATA/alldomsclans.txt) > $DATA/foo.txt; mv $DATA/foo.txt $DATA/alldomsclans.txt
-
-sed '1d' $DATA/dtable.txt | python diverge.py | awk '{if ($3>=3) print $0}' | awk '{gene[$1]=$10; row[$1]=$0} END {for (i in gene) for (j in gene) {if (gene[i]>=gene[j]) rank[i]+=1}} END {for (i in rank) print row[i],rank[i]/NR}' | sort -k11,11nr  > diverge.txt
 
 R commands:
 
