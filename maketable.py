@@ -13,11 +13,14 @@ class Record3(object):
 		self.alt = fields[4]
 		self.domain = fields[5].rstrip(";").strip("\"")
 		self.uniqid = fields[6]
-		self.gene = fields[7]
-		self.maf = float(fields[8])
-		self.impact = fields[9]
-		self.type = fields[10]
-		self.info = fields[11:21]
+		self.covct = fields[7]
+		self.len = fields[8]
+		self.covratio = fields[9]
+		self.gene = fields[10]
+		self.maf = float(fields[11])
+		self.impact = fields[12]
+		self.type = fields[13]
+		self.info = fields[14:24]
 
 def ratiocalc(nct,sct):
 	try:

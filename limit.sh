@@ -1,9 +1,9 @@
-bash query.sh $1/lolli.db '%' $2 $3 $4| python formatvar.py | sort -k6,6 -k8,8 > $1/allint2maf.$2.$3-$4.bed
+bash query.sh $1/var.db '%' $2 $3 $4 | python formatvar.py | sort -k6,6 -k8,8 > $1/allint2maf.$2.$3-$4.bed
 python maketable.py $1/allint2maf.$2.$3-$4.bed > $1/foo.bed
 python mergetable.py -f $1/foo.bed $1/human_pfam.counts $1/sumlist.bed > $1/dtablemaf.$2.$3-$4.txt; rm $1/foo.bed
 
 # in R:
-dtable <- read.delim("~/work/data/pmodeldata/dtablemaf.g.0.01-.txt")
+dtable <- read.delim("~/work/data/pmodeldata/dtablemaf.g.0.001-.txt")
 par(mfrow=c(2,4))
 hist(t(dtable[dtable["domcount"]==1,]["dn.ds"]),main="domcount=1",xlab="dn.ds",breaks=30,xlim=c(0,ceiling(max(dtable["dn.ds"]))))
 text(.85*par('usr')[2],.9*par('usr')[4],labels=paste("mean:",round(mean(t(dtable[dtable["domcount"]==1,]["dn.ds"])),2)))
@@ -26,4 +26,4 @@ text(.85*par('usr')[2],.86*par('usr')[4],labels=paste("median:",round(median(t(d
 hist(t(dtable[dtable["domcount"]>100,]["dn.ds"]),main="domcount>100",xlab="dn.ds",breaks=30,xlim=c(0,ceiling(max(dtable["dn.ds"]))))
 text(.85*par('usr')[2],.9*par('usr')[4],labels=paste("mean:",round(mean(t(dtable[dtable["domcount"]>100,]["dn.ds"])),2)))
 text(.85*par('usr')[2],.86*par('usr')[4],labels=paste("median:",round(median(t(dtable[dtable["domcount"]>100,]["dn.ds"])),2)))
-mtext("maf<0.0001", side = 3, line = -2, outer = TRUE, col=2)
+mtext("maf>0.001", side = 3, line = -2, outer = TRUE, col=2)

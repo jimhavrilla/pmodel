@@ -71,11 +71,11 @@ if options.bool==False:
 			self.ct = fields[2]
 			self.nct = fields[3]
 			self.sct = fields[4]
-			self.dnds = fields[5]
-			self.z = fields[6]
-			self.mmaf = fields[7]
-			self.domcount = fields[8]
-			self.bp = fields[9]
+			self.dnds = float(fields[5])
+			self.z = float(fields[6])
+			self.mmaf = float(fields[7])
+			self.domcount = int(fields[8])
+			self.bp = int(fields[9])
 
 	def mad(a, axis=None):
 
@@ -100,19 +100,22 @@ if options.bool==False:
 			foo[0]=x
 			foo[1][r_.domain]=None
 			foo[2]=foo[2]+1
-			foo[3].append(int(r_.bp))
+			foo[3].append(r_.bp)
 			foo[4]=sum(foo[3])
-			foo[5].append(int(r_.domcount))
+			foo[5].append(r_.domcount)
 			foo[6]=sum(foo[5])
-			foo[7].append(float(r_.dnds))
+			foo[7].append(r_.dnds)
 			foo[8]=min(foo[7])
 			foo[9]=max(foo[7])
 			foo[10]=mad(foo[7])
 			foo[11].append(r_.z)
-			foo[12]=(foo[9]-foo[8])*foo[10] #(max-min)*mad
+			foo[12]=max(foo[11])-min(foo[11]) #range z-score
+			foo[13]=(foo[9]-foo[8])*foo[10]*foo[12] #(max-min)*mad
 			gene[x]=foo
 		except KeyError:
-			gene[x]=[x, collections.OrderedDict.fromkeys([r_.domain]),1,[int(r_.bp)],0,[int(r_.domcount)],0,[float(r_.dnds)],0,0,0,[float(r_.z)],0]
+			gene[x]=[x, collections.OrderedDict.fromkeys([r_.domain]),1,[r_.bp],0,[r_.domcount],0,[r_.dnds],0,0,0,[r_.z],0,0]
 
 	for x in gene:
-		sys.stdout.write('\t'.join([gene[x][0],','.join(gene[x][1]),str(gene[x][2]),str(gene[x][4]),str(gene[x][6]),','.join([str(y) for y in gene[x][7]]),str(gene[x][8]),str(gene[x][9]),str(gene[x][10]),','.join([str(y) for y in gene[x][11]]),str(gene[x][12])])+'\n')
+		sys.stdout.write('\t'.join([gene[x][0],','.join(gene[x][1]),str(gene[x][2]),str(gene[x][4]),str(gene[x][6]),','.join([str(y) for y in gene[x][7]]),str(gene[x][8]),str(gene[x][9]),str(gene[x][10]),','.join([str(y) for y in gene[x][11]]),str(gene[x][12]),str(gene[x][13])])+'\n')
+		# gene, domains, num_of_domains, bp_total, domcount_total, dnds_list, min_dnds, max_dnds, mad_dnds, z-scores, z-score_range, divergence metric
+		

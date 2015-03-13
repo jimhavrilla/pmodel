@@ -14,10 +14,13 @@ if options.bool==True:
 			self.start = fields[1]
 			self.end = fields[2]
 			self.gene = fields[3]
-			self.uniqid = fields[4]
-			self.ref = fields[5]
-			self.alt = fields[6]
-			self.info = fields[7]
+			self.uniqid = fields[4] 
+			self.covct = fields[5]
+			self.len = fields[6]
+			self.covratio = fields[7]
+			self.ref = fields[8]
+			self.alt = fields[9]
+			self.info = fields[10]
 
 	for line in sys.stdin:
 		fields=line.rstrip().split("\t")
@@ -33,7 +36,7 @@ if options.bool==True:
 			for impact in CSQ.lstrip("CSQ=").split(","):
 				toks = impact.split("|")
 				r_.csq="\t".join([x if x!="" else "." for x in toks]) # adds nodom domain field
-				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,z,".",r_.uniqid,r_.gene,y,r_.csq])
+				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,z,".",r_.uniqid,r_.covct,r_.len,r_.covratio,r_.gene,y,r_.csq])
 			ct=ct+1
 
 if options.bool==False:
@@ -45,9 +48,12 @@ if options.bool==False:
 			self.domain = fields[3]
 			self.gene = fields[4]
 			self.uniqid = fields[5]
-			self.ref = fields[6]
-			self.alt = fields[7]
-			self.info = fields[8]
+			self.covct = fields[6]
+			self.len = fields[7]
+			self.covratio = fields[8]
+			self.ref = fields[9]
+			self.alt = fields[10]
+			self.info = fields[11]
 
 	for line in sys.stdin:
 		fields=line.rstrip().split("\t")
@@ -63,5 +69,5 @@ if options.bool==False:
 			for impact in CSQ.lstrip("CSQ=").split(","):
 				toks = impact.split("|")
 				r_.csq="\t".join([x if x!="" else "." for x in toks])
-				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,z,r_.domain,r_.uniqid,r_.gene,y,r_.csq])
+				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,z,r_.domain,r_.uniqid,r_.covct,r_.len,r_.covratio,r_.gene,y,r_.csq])
 			ct=ct+1
