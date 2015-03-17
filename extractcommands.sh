@@ -29,11 +29,11 @@ rm $DATA/chr*
 bedtools intersect -a $DATA/all.bed -b $DATA/GRCh37.bed -wb | awk {'print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$17'} FS='\t' OFS='\t' | perl uniq.pl | perl -pe 's/"|;//g' > $DATA/foo.bed
 awk 'NR==FNR{a[$3];next}$15 in a{print $0}' /Users/jmh2tt/work/data/pmodeldata/appris_data.principal.txt $DATA/foo.bed | tr -s " " "\t" | sort -k45,45 -k1,1 -k2,2n > $DATA/blah.txt; mv $DATA/blah.txt $DATA/foo.bed
 # domain coverage and rearranging:  // based on histograms, used 5x as a filter
-python rearrange2.py $DATA/foo.bed $DATA/bar
+python rearrange2.py -u $DATA/foo.bed $DATA/bar
 bedtools intersect -a <(cat $DATA/bar | tr -s "\t" " " | cut -d " " -f 1-45 | tr -s " " "\t") -b <(awk '{if ($4>=5) print}' $DATA/coverage.bed) -wa -wb \
 | awk '{ct[$1 $2 $3 $45]++; len[$1 $2 $3 $45]=$4; row[$1 $2 $3 $45]=$0} END {for (i in ct) print row[i],ct[i],len[i],ct[i]/len[i]}' \
 | tr -s " " "\t" | cut -f 1-45,50- > $DATA/alluniq.bed; rm $DATA/bar
-sort -k11,11 -k1,1 -k2,2n $DATA/foo.bed | python rearrange3.py $DATA/alldom.bed
+sort -k11,11 -k1,1 -k2,2n $DATA/foo.bed | python rearrange2.py -d $DATA/alldom.bed
 bedtools intersect -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b <(sort -k1,1 -k2,2n $DATA/alluniq.bed) -wa -wb \
 | perl -pe 's/"|;//g' | awk '{ if ($8==$51 && $24==$67) print $0}' | tr -s " " "\t" | cut -f -35 \
 | cat - <(bedtools intersect -v -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b $DATA/alluniq.bed | sort -k1,1 -k2,2n) \
