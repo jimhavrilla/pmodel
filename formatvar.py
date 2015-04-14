@@ -1,13 +1,6 @@
 import string
 import sys
 import re
-from argparse import ArgumentParser
-
-parser = ArgumentParser()
-parser.add_argument("--maf","-m",help="default=>0 maf",default=0,type=float)
-args=parser.parse_args()
-
-mpar=args.maf
 
 class Record1(object):
 	def __init__(self, fields):
@@ -54,8 +47,6 @@ impact_list=[]
 for line in sys.stdin:
 	fields=line.rstrip().split("|")
 	r_=Record1(fields)
-	if float(r_.maf) < mpar:
-		continue
 	c_=Csq();c_.impact=r_.impact;c_.info=r_.info
 	if old_r!=None:
 		impact_list.append(old_c)

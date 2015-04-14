@@ -7,6 +7,7 @@ from optparse import OptionParser
 parser = OptionParser()
 parser.add_option("-d","--domain",dest="bool",help="domains",action="store_false")
 parser.add_option("-u","--uniqid",dest="bool",help="default,uniqids",action="store_true")
+(options,args)=parser.parse_args()
 
 if options.bool==True:
 	class Record1(object):
@@ -59,7 +60,7 @@ if options.bool==True:
 			for i in bed.splitlines():
 				i=i.split("\t")
 				old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
-				f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
+				f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
 			bed=''
 		bed=bed+r_.chr+"\t"+r_.start+"\t"+r_.end+"\n"
 		old_r=r_
@@ -68,7 +69,7 @@ if options.bool==True:
 	for i in bed.splitlines():
 		i=i.split("\t")
 		old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
-		f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
+		f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
 
 	f1.close();f2.close();
 
@@ -102,7 +103,7 @@ if options.bool==False:
 			for i in bed.splitlines():
 				i=i.split("\t")
 				old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
-				f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
+				f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
 			bed=''
 		bed=bed+r_.chr+"\t"+r_.start+"\t"+r_.end+"\n"
 		old_r=r_
@@ -111,6 +112,6 @@ if options.bool==False:
 	for i in bed.splitlines():
 		i=i.split("\t")
 		old_r.chr=i[0];old_r.start=i[1];old_r.end=i[2]
-		f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)+1),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
+		f2.write("\t".join([old_r.chr,old_r.start,old_r.end,str(int(old_r.end)-int(old_r.start)),old_r.database,old_r.seqtype,old_r.field7,old_r.strand,old_r.field9,old_r.info])+"\n")
 
 	f2.close();
