@@ -10,11 +10,11 @@ case "$1" in
 		DATA=$(perl -pe 's/(.*\/)\w*\.\w*/$1/g' <<< $DATA)
 
 		#calculates median maf, counts
-		gawk 'function median(v) {c=asort(v,j); if (c % 2) return j[(c+1)/2]; else return (j[c/2+1]+j[c/2])/2} {{if ($14=="ds") {sct[$7]++; ct[$7]++} else if ($14=="dn") nct[$7]++; ct[$7]++} len[$7]=$9; maf[$7][$1 $2 $3 $14]=$12; row[$7]=$6 " " $11 " " $7 " " $8 " " $9 " " $10} END {for (i in ct) print row[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/len[i],median(maf[i])}' $DATA/allint2uniq.$MOD.$MAF1-$MAF2.bed > $DATA/uniqtable.$MOD.$MAF1-$MAF2.txt
+		gawk 'function median(v) {c=asort(v,j); if (c % 2) return j[(c+1)/2]; else return (j[c/2+1]+j[c/2])/2} {{if ($14=="ds") {sct[$7]++; ct[$7]++} else if ($14=="dn") nct[$7]++; ct[$7]++} len[$7]=$9; maf[$7][$1 $2 $3 $14]=$12; row[$7]=$6 " " $11 " " $7 " " $8 " " $9 " " $10} END {for (i in ct) print row[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/len[i],median(maf[i])}' $DATA/allint2uniq.$MOD.$MAF1-$MAF2.bed | awk '{$4++; $6=$4/$5; print}' > $DATA/uniqtable.$MOD.$MAF1-$MAF2.txt
 
 		awk 'NR==FNR{a[$2]=$3} NR!=FNR{if ($1 in a) print $0,a[$1]; else print $0,0}' $DATA/human_pfam.counts $DATA/uniqtable.$MOD.$MAF1-$MAF2.txt > $DATA/foo; mv $DATA/foo $DATA/uniqtable.$MOD.$MAF1-$MAF2.txt
 		
-		grep -v -w "\." $DATA/uniqtable.$MOD.$MAF1-$MAF2.txt | awk '{if ($6>=.9) print $0}' | sort -k1,1 -k2,2 | python dg.py -u | sort -k2,2 -k3,3 | python diverge.py -u | awk '{if ($3>3) print $0}'| awk '{uniq[$1 $2]=$1; row[$1 $2]=$0; gene[$1]=$12} END {for (i in gene) ct++} END {for (i in gene) for (j in gene) {if (gene[i]>=gene[j]) rank[i]++}} END {for (j in uniq) for (i in gene) {if (i==uniq[j]) print row[j],rank[i]/ct}}' | tr -s " " "\t" | sort -k16,16nr  > $DATA/diverge.pair.txt
+		grep -v -w "\." $DATA/uniqtable.$MOD.$MAF1-$MAF2.txt | sort -k1,1 -k2,2 | python dg.py -u | sort -k2,2 -k3,3 | python diverge.py -u | awk '{if ($3>3) print $0}'| awk '{uniq[$1 $2]=$1; row[$1 $2]=$0; gene[$1]=$12} END {for (i in gene) ct++} END {for (i in gene) for (j in gene) {if (gene[i]>=gene[j]) rank[i]++}} END {for (j in uniq) for (i in gene) {if (i==uniq[j]) print row[j],rank[i]/ct}}' | tr -s " " "\t" | sort -k16,16nr  > $DATA/diverge.pair.txt
 
 		awk 'NR==FNR{a[$1]=$3;next}$1 in a{print $0,a[$1]}' OFS='\t' $DATA/rvis.txt $DATA/diverge.pair.txt > $DATA/foo
 
@@ -26,7 +26,7 @@ case "$1" in
 
 		(grep ^# <(gzcat $DATA/clinvar_20150305.vcf.gz); grep 'CLNSIG=5' <(gzcat $DATA/clinvar_20150305.vcf.gz)) | bedtools intersect -a $DATA/alluniq.bed -b stdin | sort -k45,45 | bedtools groupby -i stdin -g 45 -c 45 -o count > $DATA/clinvaruniq.txt
 
-		awk 'FNR==NR{uniq[$1]=$2} {u[$2]=$0} END {for (i in uniq) {if (i in u) print u[i],uniq[i]}}' $DATA/clinvaruniq.txt $DATA/divtable.txt | tr -s " " "\t" | sort -k20,20r -k16,16r > $DATA/truedivtable.txt
+		awk 'FNR==NR{uniq[$1]=$2} {u[$2]=$0} END {for (i in uniq) {if (i in u) print u[i],uniq[i]}}' $DATA/clinvaruniq.txt $DATA/divtable.txt | tr -s " " "\t" | sort -k20,20r -k16,16r -k2,2 > $DATA/truedivtable.txt
 
 	-d|--domain)
 

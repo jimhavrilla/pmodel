@@ -48,14 +48,14 @@ if options.bool==True:
 	# 		foo=self.info.rstrip().split(";")
 	# 		bar=(foo[2]+foo[0]+foo[8]).split("\"")
 	# 		self.uniqid=bar[3]+"_"+bar[5]
-	f1=open(sys.argv[1],"r")
-	f2=open(sys.argv[2],"w")
+	f1=open(sys.argv[2],"r")
+	f2=open(sys.argv[3],"w")
 	bed=''
 	old_r=None
 	for line in f1:
 		fields=line.rstrip().split("\t")
 		r_=Record1(fields)
-		if old_r != None and r_.uniqid != old_r.uniqid:
+		if old_r != None and r_.autoreg != old_r.autoreg:
 			bed=str(pybedtools.BedTool(bed.rstrip('\n'),from_string=True).merge())
 			for i in bed.splitlines():
 				i=i.split("\t")

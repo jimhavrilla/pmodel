@@ -37,7 +37,10 @@ rm $DATA/chr*
 # remove utrs and introns
 
 bedtools intersect -a $DATA/all.bed -b $DATA/GRCh37.bed -wb | awk {'print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$17'} FS='\t' OFS='\t' | perl uniq.pl | perl -pe 's/"|;//g' > $DATA/foo.bed
-awk 'NR==FNR{a[$3];next}$15 in a{print $0}' /Users/jmh2tt/work/data/pmodeldata/appris_data.principal.txt $DATA/foo.bed | tr -s " " "\t" | sort -k45,45 -k1,1 -k2,2n > $DATA/blah.txt; mv $DATA/blah.txt $DATA/foo.bed
+
+#use appris to remove non-canonical transcripts; sort by ENSL gene_id and Pfam autoreg to merge uniqids into single domain
+
+awk 'NR==FNR{a[$3];next}$15 in a{print $0}' /Users/jmh2tt/work/data/pmodeldata/appris_data.principal.txt $DATA/foo.bed | tr -s " " "\t" | sort -k27,27 -k25,25 -k1,1 -k2,2 > $DATA/blah.txt; mv $DATA/blah.txt $DATA/foo.bed
 
 # domain coverage and rearranging:  // based on histograms, used 5x as a filter
 
@@ -139,6 +142,16 @@ bash limit.sh $DATA g 0.001
 # cat <(printf "chr\tstart\tend\tbplength\tdb\tseqtype\tblank\tstrand\tblank\tpfamA_id\tgene_name\ttranscript_id\tprotein_id\tpfamseq_acc\tpfamseq_id\tpfamA_acc\tpfamA_auto_reg\tgene_id\ttranscript_id2\texon_number\tgene_name2\tgene_source\tgene_biotype\ttranscript_name\ttranscript_source\texon_id\tuniq_id\tpfamA_acc\tclan_acc\tclan_id\tdom_cnt\n") <(sed '1d' $DATA/alldomsclans.txt) > $DATA/foo.txt; mv $DATA/foo.txt $DATA/alldomsclans.txt
 
 R commands:
+
+#generate dn/ds distro plots
+uniqtable <- read.table("~/work/data/pmodeldata/uniqtable.txt", quote="\"")
+u<-uniqtable[uniqtable["V1"]!='.',]
+library(dplyr)
+u<-arrange(u,desc(V10))
+plot(u$V10,ylim=c(0,6),ylab="dn/ds",main="Dn/Ds distribution across domain regions")
+abline(h=mean(u$V10))
+abline(h=median(u$V10))
+text(x=c(length(u$V10)*3/4,length(u$V10)*3/4),cex=0.7,y=c(mean(u$V10),median(u$V10)),pos=3,labels=c('mean','median'))
 
 library(ggplot2)
 library(plotrix)
