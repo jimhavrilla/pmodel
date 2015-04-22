@@ -10,14 +10,15 @@ class Record1(object):
 		self.ref = fields[3]
 		self.alt = fields[4]
 		self.domain = fields[5]
-		self.uniqid = fields[6]
-		self.covct = fields[7]
-		self.len = fields[8]
-		self.covratio = fields[9]
-		self.gene = fields[10]
-		self.maf = fields[11]
-		self.impact = fields[12]
-		self.info = fields[13:23]
+		self.autoreg = fields[6]
+		self.uniqid = fields[7]
+		self.covct = fields[8]
+		self.len = fields[9]
+		self.covratio = fields[10]
+		self.gene = fields[11]
+		self.maf = fields[12]
+		self.impact = fields[13]
+		self.info = fields[14:24]
 
 class Csq(object):
 	def __init__(self):
@@ -53,13 +54,13 @@ for line in sys.stdin:
 	if old_r!=None and old_r.start+old_r.end != r_.start+r_.end:
 		d_=judge_impact(impact_list)
 		for x in d_.values():
-			print "\t".join([old_r.chr,old_r.start,old_r.end,old_r.ref,old_r.alt,old_r.domain,old_r.uniqid,old_r.covct,old_r.len,old_r.covratio,old_r.gene,old_r.maf])+'\t'+x
+			print "\t".join([old_r.chr,old_r.start,old_r.end,old_r.ref,old_r.alt,old_r.domain,old_r.autoreg,old_r.uniqid,old_r.covct,old_r.len,old_r.covratio,old_r.gene,old_r.maf])+'\t'+x
 		impact_list=[]
 	old_r=r_
 	old_c=c_
 
 if old_c!=None:
 	impact_list.append(old_c)
-	d=judge_impact(impact_list)
+	d_=judge_impact(impact_list)
 	for x in d_.values():
-		print "\t".join([old_r.chr,old_r.start,old_r.end,old_r.ref,old_r.alt,old_r.domain,old_r.uniqid,old_r.covct,old_r.len,old_r.covratio,old_r.gene,old_r.maf])+'\t'+x
+		print "\t".join([old_r.chr,old_r.start,old_r.end,old_r.ref,old_r.alt,old_r.domain,old_r.autoreg,old_r.uniqid,old_r.covct,old_r.len,old_r.covratio,old_r.gene,old_r.maf])+'\t'+x

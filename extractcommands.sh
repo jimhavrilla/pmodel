@@ -40,13 +40,13 @@ bedtools intersect -a $DATA/all.bed -b $DATA/GRCh37.bed -wb | awk {'print $1,$2,
 
 #use appris to remove non-canonical transcripts; sort by ENSL gene_id and Pfam autoreg to merge uniqids into single domain
 
-awk 'NR==FNR{a[$3];next}$15 in a{print $0}' /Users/jmh2tt/work/data/pmodeldata/appris_data.principal.txt $DATA/foo.bed | tr -s " " "\t" | sort -k27,27 -k25,25 -k1,1 -k2,2 > $DATA/blah.txt; mv $DATA/blah.txt $DATA/foo.bed
+awk 'NR==FNR{a[$3];next}$15 in a{print $0}' /Users/jmh2tt/work/data/pmodeldata/appris_data.principal.txt $DATA/foo.bed | tr -s " " "\t" | sort -k27,27 -k25,25 -k1,1 -k2,2n -k3,3n > $DATA/blah.txt; mv $DATA/blah.txt $DATA/foo.bed
 
 # domain coverage and rearranging:  // based on histograms, used 5x as a filter
 
-python rearrange2.py -u $DATA/foo.bed $DATA/bar
+python rearrange2.py -u $DATA/foo.bed $DATA/bar # check why ensl ids are different and why transcript pfam != transcript ensl
 bedtools intersect -a <(cat $DATA/bar | tr -s "\t" " " | cut -d " " -f 1-45 | tr -s " " "\t") -b <(awk '{if ($4>=5) print}' $DATA/coverage.bed) -wa -wb \
-| awk '{ct[$1 $2 $3 $45]++; len[$1 $2 $3 $45]=$4; row[$1 $2 $3 $45]=$0} END {for (i in ct) print row[i],ct[i],len[i],ct[i]/len[i]}' \
+| awk '{ct[$1 $2 $3 $45]++; len[$1 $2 $3 $45]=$4; row[$1 $2 $3 $45]=$0} END {for (i in ct) print row[i],(ct[i]==0 ? ct[i]=0: ct[i]), (len[i]==0 ? len[i]=1: len[i]),ct[i]/(len[i]==0 ? len[i]=1: len[i])}' \
 | tr -s " " "\t" | cut -f 1-45,50- > $DATA/alluniq.bed; rm $DATA/bar
 sort -k11,11 -k1,1 -k2,2n $DATA/foo.bed | python rearrange2.py -d $DATA/alldom.bed
 bedtools intersect -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b <(sort -k1,1 -k2,2n $DATA/alluniq.bed) -wa -wb \
@@ -54,20 +54,18 @@ bedtools intersect -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | p
 | cat - <(bedtools intersect -v -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b $DATA/alluniq.bed | sort -k1,1 -k2,2n) \
 | sort -k1,1 -k2,2n | python nodom.py $DATA/foo
 bedtools intersect -a $DATA/foo -b <(awk '{if ($4>=5) print}' $DATA/coverage.bed) -wa -wb \
-| awk '{ct[$1 $2 $3 $24]++; len[$1 $2 $3 $24]=$4; row[$1 $2 $3 $24]=$0} END {for (i in ct) print row[i],ct[i],len[i],ct[i]/len[i]}' \
+| awk '{ct[$1 $2 $3 $24]++; len[$1 $2 $3 $24]=$4; row[$1 $2 $3 $24]=$0} END {for (i in ct) print row[i],(ct[i]==0 ? ct[i]=0: ct[i]),(len[i]==0 ? len[i]=1: len[i]),ct[i]/(len[i]==0 ? len[i]=1: len[i])}' \
 | tr -s " " "\t" | cut -f -24,29- > $DATA/nodom.bed; rm $DATA/foo
 cat $DATA/alluniq.bed $DATA/nodom.bed | sort -k1,1 -k2,2n | cat <(printf "#header for nodoms:\n#chr,start,end,length,info\n#info field contains gene_id, transcript_id, exon_number, gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, near_pfamA_id (if applicable, describes what domain it is near), uniq_id\n#header for domains separated by exon:\n#chr,start,end,length,pfam_database_ver,type_of_sequence,blank_field,strand,blank_field2,info\n#info field contains pfamA_id, gene_name, transcript_id, protein_id, pfamseq_acc, pfamseq_id, pfamA_acc, pfamA_auto_reg, gene_id, matched_transcript_id, expn_number, matched_gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, uniq_id, ccds_id (if applicable)\n") - > $DATA/allregions.bed
 
-# get MAF and convert from percent to fraction, variant type (FG), gene, domain, chr, start, end, impact, other info for analysis
+# do intersections for variants, merge lengths for autoreg+gene combos, get MAF and convert from percent to fraction, variant type (FG), gene, domain, chr, start, end, impact, other info for analysis
 
-cat <(grep "^#" $DATA/VEPEXAC.vcf) <(grep -v "^#" $DATA/VEPEXAC.vcf | sort -k1,1 -k2,2n) > $DATA/foo; mv $DATA/foo $DATA/VEPEXAC.vcf
+cat <(grep "^#" $DATA/VEPEXAC.vcbf) <(grep -v "^#" $DATA/VEPEXAC.vcf | sort -k1,1 -k2,2n) > $DATA/foo; mv $DATA/foo $DATA/VEPEXAC.vcf
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alldom.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPEXAC.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/domint.bed
-bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alluniq.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45,46,47,48 ) -b $DATA/VEPEXAC.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,8,9,13,14,17 | python var.py -d > $DATA/uniqint.bed
-bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/nodom.bed | tr -s " " "\t" | cut -f 1,2,3,12,24,25,26,27 ) -b $DATA/VEPEXAC.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,8,12,13,16 | python var.py -n > $DATA/nodomint.bed
+bedtools intersect -a <(cut -f 1,2,3,11,13,25,27,43,45,46,47,48 $DATA/alluniq.bed | python lencount.py | sort -k1,1 -k2,2n -k3,3n ) -b $DATA/VEPEXAC.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18 | python var.py -d > $DATA/uniqint.bed
+bedtools intersect -a <(cat $DATA/nodom.bed | cut -f 1,2,3,12,24,25,26,27 | awk '{t=$8;$8=$7;$7=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,8,12,13,16 | python var.py -n > $DATA/nodomint.bed
 
-####NEW####bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alluniq.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b <(gzcat ~/Downloads/ExAC.r0.1.sites.vep.vcf.gz) -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py > foodom
-
-cat $DATA/uniqint.bed $DATA/nodomint.bed | sort -k1,1 -k2,2n | cat <(printf "#chr,start,end,ref,alt,pfamA_id,uniqid,covct,length_of_region,covratio,gene_symbol,maf,impact,codons,amino_acids,gene_id_csq,gene_symbol_csq,transcript_id_csq,exon_number_csq,polyphen,sift,protein_position,biotype\n") - > $DATA/allint.bed
+cat $DATA/uniqint.bed $DATA/nodomint.bed | cat <(printf "#chr,start,end,ref,alt,pfamA_id,autoreg,uniqid,covct,length_of_region,covratio,gene_symbol,maf,impact,codons,amino_acids,gene_id_csq,gene_symbol_csq,transcript_id_csq,exon_number_csq,polyphen,sift,protein_position,biotype\n") - > $DATA/allint.bed
 
 # sort domain occurrence count from bill
 
@@ -79,7 +77,7 @@ cat $DATA/alldom.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {fo
 
 # make db for queries AND filter variants by canonical transcripts
 
-bash makedb.sh $DATA/var.db <(awk 'NR==FNR{a[$3];next}$18 in a{print $0}' $DATA/appris_data.principal.txt <(sed '1d' $DATA/allint.bed)) 
+bash makedb.sh $DATA/var.db <(awk 'NR==FNR{a[$3];next}$19 in a{print $0}' $DATA/appris_data.principal.txt <(sed '1d' $DATA/allint.bed)) 
 
 # pick one impact per variant for domains
 
@@ -96,7 +94,7 @@ bash lollipop.sh $DATA $OUT $GENE $MOD $MAF1 $MAF2
 
 # make table of counts, non-syn, syn, total var, total bp/exome per domain
 
-python maketable.py $DATA/allint2.bed > $DATA/foo.bed
+python maketable.py $DATA/allint2dom.bed > $DATA/foo.bed
 python mergetable.py -f $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed > $DATA/dtable.txt; rm $DATA/foo.bed
 
 # by uniqid a table
@@ -147,11 +145,13 @@ R commands:
 uniqtable <- read.table("~/work/data/pmodeldata/uniqtable.txt", quote="\"")
 u<-uniqtable[uniqtable["V1"]!='.',]
 library(dplyr)
-u<-arrange(u,desc(V10))
-plot(u$V10,ylim=c(0,6),ylab="dn/ds",main="Dn/Ds distribution across domain regions")
-abline(h=mean(u$V10))
-abline(h=median(u$V10))
-text(x=c(length(u$V10)*3/4,length(u$V10)*3/4),cex=0.7,y=c(mean(u$V10),median(u$V10)),pos=3,labels=c('mean','median'))
+u<-arrange(u,desc(V11))
+plot(u$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across domain regions")
+abline(h=mean(u$V11))
+abline(h=median(u$V11))
+text(x=c(length(u$V11)*3/4,length(u$V10)*3/4),cex=0.7,y=c(mean(u$V11),median(u$V11)),pos=3,labels=c('mean','median'))
+text(x=c(length(u$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+hist(u$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution",xlim=c(0,5))
 
 library(ggplot2)
 library(plotrix)

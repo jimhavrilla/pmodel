@@ -23,34 +23,35 @@ if args.uniqid:
 		def __init__(self, fields):
 			self.domain = fields[0]
 			self.gene = fields[1]
-			self.uniqid = fields[2]
-			self.coverage = fields[3]
-			self.length = fields[4]
-			self.covratio = fields[5]
-			self.nct = fields[6]
-			self.sct = fields[7]
-			self.ct = fields[8]
-			self.dnds = float(fields[9])
-			self.density = fields[10]
-			self.mmaf = fields[11]
-			self.domcount = fields[12]
+			self.autoreg = fields[2]
+			self.uniqid = fields[3]
+			self.coverage = fields[4]
+			self.truelength = fields[5]
+			self.covratio = fields[6]
+			self.nct = fields[7]
+			self.sct = fields[8]
+			self.ct = fields[9]
+			self.dnds = float(fields[10])
+			self.density = fields[11]
+			self.mmaf = fields[12]
+			self.domcount = fields[13]
 
 	xlist=[]
 	old_r=None
 	for line in sys.stdin:
 		fields=line.rstrip().split(" ")
 		r_=Record(fields)
-		if old_r!=None and old_r.domain != r_.domain:
+		if old_r!=None and old_r.gene != r_.gene:
 			l=[y.dnds for y in xlist[0:len(xlist)]]
 			m=numpy.mean(l)
 			s=numpy.std(l)
 			for y in xlist:
 				if s==0.0:
 					s=1.0
-				if bpar>r_.length or dpar>r_.domcount:
+				if bpar>r_.truelength or dpar>r_.domcount:
 					continue
 				else:
-					sys.stdout.write("\t".join([y.domain,y.gene,y.uniqid,y.coverage,y.length,y.covratio,y.nct,y.sct,y.ct,str(y.dnds),str((y.dnds-m)/s),y.density,y.mmaf,y.domcount,"\n"]))
+					sys.stdout.write("\t".join([y.domain,y.gene,y.autoreg,y.uniqid,y.coverage,y.covratio,y.truelength,y.nct,y.sct,y.ct,str(y.dnds),str((y.dnds-m)/s),y.density,y.mmaf,y.domcount,"\n"]))
 			xlist=[]
 		xlist.append(r_)
 		old_r=r_
@@ -61,10 +62,10 @@ if args.uniqid:
 	for y in xlist:
 		if s==0.0:
 			s=1.0
-		if bpar>r_.length or dpar>r_.domcount:
+		if bpar>r_.truelength or dpar>r_.domcount:
 			continue
 		else:
-			sys.stdout.write("\t".join([y.domain,y.gene,y.uniqid,y.coverage,y.length,y.covratio,y.nct,y.sct,y.ct,str(y.dnds),str((y.dnds-m)/s),y.density,y.mmaf,y.domcount,"\n"]))
+			sys.stdout.write("\t".join([y.domain,y.gene,y.autoreg,y.uniqid,y.coverage,y.covratio,y.truelength,y.nct,y.sct,y.ct,str(y.dnds),str((y.dnds-m)/s),y.density,y.mmaf,y.domcount,"\n"]))
 
 if args.domain:
 	class RecordA(object):

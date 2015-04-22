@@ -26,6 +26,7 @@ if options.bool==True:
 			self.transid2 = fields[28]
 			self.uniqid = fields[44].rstrip(';')
 			self.autoreg = fields[24]
+			self.geneid = fields[26]
 			self.gene = fields[12]
 
 	# class Record2(object):
@@ -55,7 +56,7 @@ if options.bool==True:
 	for line in f1:
 		fields=line.rstrip().split("\t")
 		r_=Record1(fields)
-		if old_r != None and r_.autoreg != old_r.autoreg:
+		if old_r != None and (r_.autoreg != old_r.autoreg or r_.geneid!=old_r.geneid): # check why ensl ids are different and why transcript pfam != transcript ensl
 			bed=str(pybedtools.BedTool(bed.rstrip('\n'),from_string=True).merge())
 			for i in bed.splitlines():
 				i=i.split("\t")

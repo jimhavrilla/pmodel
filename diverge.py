@@ -27,18 +27,19 @@ if args.uniqids:
 		def __init__(self, fields):
 			self.domain = fields[0]
 			self.gene = fields[1]
-			self.uniqid = fields[2]
-			self.coverage = int(fields[3])
-			self.length = int(fields[4])
-			self.covratio = float(fields[5])
-			self.nct = int(fields[6])
-			self.sct = int(fields[7])
-			self.ct = int(fields[8])
-			self.dnds = float(fields[9])
-			self.z = float(fields[10])
-			self.density = float(fields[11])
-			self.maf = float(fields[12])
-			self.domcount = int(fields[13])
+			self.autoreg = fields[2]
+			self.uniqid = fields[3]
+			self.coverage = int(fields[4])
+			self.truelength = int(fields[5])
+			self.covratio = float(fields[6])
+			self.nct = int(fields[7])
+			self.sct = int(fields[8])
+			self.ct = int(fields[9])
+			self.dnds = float(fields[10])
+			self.z = float(fields[11])
+			self.density = float(fields[12])
+			self.maf = float(fields[13])
+			self.domcount = int(fields[14])
 
 	gene={}
 
@@ -50,9 +51,9 @@ if args.uniqids:
 		try:
 			foo=gene[x]
 			foo[0]=x
-			foo[1][r_.uniqid]=None
+			foo[1][r_.autoreg]=r_.domain
 			foo[2]=foo[2]+1
-			foo[3].append(r_.length)
+			foo[3].append(r_.truelength)
 			foo[4].append(r_.domcount)
 			foo[5].append(r_.dnds)
 			foo[6]=min(foo[5])
@@ -66,12 +67,12 @@ if args.uniqids:
 			foo[14].append(r_.density)
 			gene[x]=foo
 		except KeyError:
-			gene[x]=[x, collections.OrderedDict.fromkeys([r_.uniqid]),1,[r_.length],[r_.domcount],[r_.dnds],0,0,0,[r_.z],0,0,[r_.coverage],[r_.covratio],[r_.density]]
+			gene[x]=[x, collections.OrderedDict([(r_.autoreg,r_.domain)]),1,[r_.truelength],[r_.domcount],[r_.dnds],0,0,0,[r_.z],0,0,[r_.coverage],[r_.covratio],[r_.density]]
 
 	for x in gene:
 		i=0
 		for y in gene[x][1].keys():
-			sys.stdout.write('\t'.join([gene[x][0],y,str(gene[x][2]),str(gene[x][3][i]),str(gene[x][4][i]),str(gene[x][5][i]),str(gene[x][6]),str(gene[x][7]),str(gene[x][8]),str(gene[x][9][i]),str(gene[x][10]),str(gene[x][11]),str(gene[x][12][i]),str(gene[x][13][i]),str(gene[x][14][i])])+'\n')
+			sys.stdout.write('\t'.join([gene[x][0],y,gene[x][1][y],str(gene[x][2]),str(gene[x][3][i]),str(gene[x][4][i]),str(gene[x][5][i]),str(gene[x][6]),str(gene[x][7]),str(gene[x][8]),str(gene[x][9][i]),str(gene[x][10]),str(gene[x][11]),str(gene[x][12][i]),str(gene[x][13][i]),str(gene[x][14][i])])+'\n')
 			i=i+1
 		# sys.stdout.write('\t'.join([gene[x][0],','.join(gene[x][1]),str(gene[x][2]),str(gene[x][4]),','.join([str(y) for y in gene[x][5]]),','.join([str(y) for y in gene[x][7]]),str(gene[x][8]),str(gene[x][9]),str(gene[x][10]),','.join([str(y) for y in gene[x][11]]),str(gene[x][12]),str(gene[x][13]),','.join([str(y) for y in gene[x][14]]),str(gene[x][15]),','.join([str(y) for y in gene[x][16]]),','.join([str(y) for y in gene[x][17]])])+'\n')
 		# gene, domains, num_of_domains, bp_total, domcount_total, dnds_list, min_dnds, max_dnds, mad_dnds, z-scores, z-score_range, divergence metric
