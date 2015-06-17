@@ -1,14 +1,27 @@
-#for initial p53 pass:
-
-#python extract.py
-#hgTables is pfam from UCSC GenomeBrowser
-#cat $DATA/hgTables | awk '{t=$1;$1=$2;$2=t;t=$2;$2=$3;$3=t;t=$3;$3=$4;$4=t;print;}' | tr -s " " | tr -s " " "\t" | tail -n +2 | sort -k1,1 -k2,2n > $DATA/hgTables.bed
-#bedtools intersect -a $DATA/hgTables.bed -b $DATA/gene.bed -sorted | sort -k1,1 -k2,2n | bedtools merge -i stdin -c 4,5 -o distinct > $DATA/p53domain.bed
-
-#bill's domain count file:
+#python extract.py (old vcf extract prog)
 
 export DATA=~/work/data/pmodeldata
 export SOFTWARE=~/software
+export $SCRATCH=~/work/scratch/analysis
+
+# high dn/ds regions: 
+# test for hgtables repeats
+gawk 'NR==FNR{a[$4][$1 $2 $3]=$1 " " $2 " " $3} NR!=FNR{if ($3 in a) {for (i in a[$3]) print a[$3][i],$0}}' <(cut -f 1,2,3,25 $DATA/alluniq.bed) <(cut -d " " -f 1,2,3,8,9,11 $DATA/uniqtable.txt | grep -v "_ND") > $SCRATCH/domaincoordsdnds.bed
+#perl -pe 's/^chr(.*)$/$1/g' $DATA/hgsimple.bed (to each hgtables repeat file to clip off the chr part)
+dir=($(ls $DATA/hg*))
+dir[6]=$DATA/LCR-hs37d5.bed
+for i in {0..6}; do bedtools intersect -a $SCRATCH/domaincoordsdnds.bed -b ${dir[$i]} -f 0.2 -u > $SCRATCH/$(echo ${dir[$i]} | perl -pe 's/.*\/(.*)\..*/$1/g')'.txt'; done
+dir=($(ls $SCRATCH/hg*))
+dir[6]=$SCRATCH/LCR-hs37d5.txt
+for i in {0..6}; do awk '{if ($9>=10) print $0}' ${dir[$i]} | wc -l; done #in alpha-order, interrupted, micro, repeats, segmental, selfchain, simple, then LCR
+awk '{if ($9 >= 10) print $0}' $SCRATCH/domaincoordsdnds.bed | wc -l # how many domain regions for each dn/ds?
+grep -v "_ND" $DATA/uniqtable.txt | awk '{if ($11 >= 10) print $0}' | wc -l # how many autoregs for each dn/ds?
+# test for k-mer alignability/blacklist/excludable regions
+dir=($(ls $DATA/wg*.bed*))
+for ((i=0; i<${#dir[@]}; i++)); do ${dir[$i]}; bedtools intersect -a $SCRATCH/domaincoordsdnds.bed -b <(awk '{if ($4<=0.1) print $0}' ${dir[$i]}) -f 0.2 -u > $SCRATCH/$(echo ${dir[$i]} | perl -pe 's/.*\/(.*)\..*/$1/g')'.txt'; done
+
+#bill's domain count file:
+
 mysql -N --raw -h wrpxdb.its.virginia.edu -u web_user -pfasta_www pfam27 < count_human_pfam.sql > human_pfam.counts
 
 #for vcfs:
@@ -44,8 +57,10 @@ awk 'NR==FNR{a[$3];next}$15 in a{print $0}' /Users/jmh2tt/work/data/pmodeldata/a
 
 # domain coverage and rearranging:  // based on histograms, used 5x as a filter
 
+parallel -a <(cat $DATA/bar | tr -s "\t" " " | cut -d " " -f 1-45 | tr -s " " "\t") 
+
 python rearrange2.py -u $DATA/foo.bed $DATA/bar # check why ensl ids are different and why transcript pfam != transcript ensl
-bedtools intersect -a <(cat $DATA/bar | tr -s "\t" " " | cut -d " " -f 1-45 | tr -s " " "\t") -b <(awk '{if ($4>=5) print}' $DATA/coverage.bed) -wa -wb \
+bedtools intersect -a <(cat $DATA/bar | tr -s "\t" " " | cut -d " " -f 1-45 | tr -s " " "\t") -b <(awk '{if ($4>=20) print}' $DATA/coverage.bed) -wa -wb \
 | awk '{ct[$1 $2 $3 $45]++; len[$1 $2 $3 $45]=$4; row[$1 $2 $3 $45]=$0} END {for (i in ct) print row[i],(ct[i]==0 ? ct[i]=0: ct[i]), (len[i]==0 ? len[i]=1: len[i]),ct[i]/(len[i]==0 ? len[i]=1: len[i])}' \
 | tr -s " " "\t" | cut -f 1-45,50- > $DATA/alluniq.bed; rm $DATA/bar
 sort -k11,11 -k1,1 -k2,2n $DATA/foo.bed | python rearrange2.py -d $DATA/alldom.bed
@@ -53,15 +68,15 @@ bedtools intersect -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | p
 | perl -pe 's/"|;//g' | awk '{ if ($8==$51 && $24==$67) print $0}' | tr -s " " "\t" | cut -f -35 \
 | cat - <(bedtools intersect -v -a <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | tr -s " " "\t" | sort -k1,1 -k2,2n) -b $DATA/alluniq.bed | sort -k1,1 -k2,2n) \
 | sort -k1,1 -k2,2n | python nodom.py $DATA/foo
-bedtools intersect -a $DATA/foo -b <(awk '{if ($4>=5) print}' $DATA/coverage.bed) -wa -wb \
+bedtools intersect -a $DATA/foo -b <(awk '{if ($4>=20) print}' $DATA/coverage.bed) -wa -wb \
 | awk '{ct[$1 $2 $3 $24]++; len[$1 $2 $3 $24]=$4; row[$1 $2 $3 $24]=$0} END {for (i in ct) print row[i],(ct[i]==0 ? ct[i]=0: ct[i]),(len[i]==0 ? len[i]=1: len[i]),ct[i]/(len[i]==0 ? len[i]=1: len[i])}' \
 | tr -s " " "\t" | cut -f -24,29- > $DATA/nodom.bed; rm $DATA/foo
 cat $DATA/alluniq.bed $DATA/nodom.bed | sort -k1,1 -k2,2n | cat <(printf "#header for nodoms:\n#chr,start,end,length,info\n#info field contains gene_id, transcript_id, exon_number, gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, near_pfamA_id (if applicable, describes what domain it is near), uniq_id\n#header for domains separated by exon:\n#chr,start,end,length,pfam_database_ver,type_of_sequence,blank_field,strand,blank_field2,info\n#info field contains pfamA_id, gene_name, transcript_id, protein_id, pfamseq_acc, pfamseq_id, pfamA_acc, pfamA_auto_reg, gene_id, matched_transcript_id, expn_number, matched_gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, uniq_id, ccds_id (if applicable)\n") - > $DATA/allregions.bed
 
 # do intersections for variants, merge lengths for autoreg+gene combos, get MAF and convert from percent to fraction, variant type (FG), gene, domain, chr, start, end, impact, other info for analysis
 
-cat <(grep "^#" $DATA/VEPEXAC.vcbf) <(grep -v "^#" $DATA/VEPEXAC.vcf | sort -k1,1 -k2,2n) > $DATA/foo; mv $DATA/foo $DATA/VEPEXAC.vcf
-bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alldom.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPEXAC.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/domint.bed
+cat <(grep "^#" $DATA/VEPEXAC3.vcf) <(grep -v "^#" $DATA/VEPEXAC3.vcf | sort -k1,1 -k2,2n) > $DATA/foo; mv $DATA/foo $DATA/VEPEXAC3.vcf
+bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alldom.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPEXAC3.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/domint.bed
 bedtools intersect -a <(cut -f 1,2,3,11,13,25,27,43,45,46,47,48 $DATA/alluniq.bed | python lencount.py | sort -k1,1 -k2,2n -k3,3n ) -b $DATA/VEPEXAC.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18 | python var.py -d > $DATA/uniqint.bed
 bedtools intersect -a <(cat $DATA/nodom.bed | cut -f 1,2,3,12,24,25,26,27 | awk '{t=$8;$8=$7;$7=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,8,12,13,16 | python var.py -n > $DATA/nodomint.bed
 
@@ -152,6 +167,10 @@ abline(h=median(u$V11))
 text(x=c(length(u$V11)*3/4,length(u$V10)*3/4),cex=0.7,y=c(mean(u$V11),median(u$V11)),pos=3,labels=c('mean','median'))
 text(x=c(length(u$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
 hist(u$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution",xlim=c(0,5))
+
+#for density plots
+
+
 
 library(ggplot2)
 library(plotrix)

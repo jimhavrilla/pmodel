@@ -41,7 +41,7 @@ if args.uniqid:
 	for line in sys.stdin:
 		fields=line.rstrip().split(" ")
 		r_=Record(fields)
-		if old_r!=None and old_r.gene != r_.gene:
+		if old_r!=None and old_r.domain != r_.domain:
 			l=[y.dnds for y in xlist[0:len(xlist)]]
 			m=numpy.mean(l)
 			s=numpy.std(l)
