@@ -2,16 +2,62 @@
 
 #generate dn/ds distro plots
 
-uniqtable <- read.table("~/work/data/pmodeldata/uniqtable.txt", quote="\"")
-u<-uniqtable[uniqtable["V1"]!='.',]
 library(dplyr)
+uniqtablefilter <- read.table("~/work/data/pmodeldata/uniqtablefilter.txt", quote="\"")
 u<-arrange(u,desc(V11))
+# dnds dist
 plot(u$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across domain regions")
 abline(h=mean(u$V11))
 abline(h=median(u$V11))
 text(x=c(length(u$V11)*3/4,length(u$V11)*3/4),cex=0.7,y=c(mean(u$V11),median(u$V11)),pos=3,labels=c(paste('mean=',mean(u$V11),sep=''),paste('median=',median(u$V11),sep='')))
 text(x=c(length(u$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
-hist(u$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution",xlim=c(0,5))
+# histogram
+hist(u$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for domains",xlim=c(0,5))
+# length vs dnds
+plot(u$V7,u$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for domain regions")
+# domain counts vs dnds
+plot(u$V14,u$V11,xlab="domain count across genome",ylab="dn/ds",main="dN/dS vs domain prevalence")
+
+n<-nodomtablefilter
+n<-arrange(n,desc(V11))
+plot(n$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across non-domain regions")
+abline(h=mean(n$V11))
+abline(h=median(n$V11))
+text(x=c(length(n$V11)*3/4,length(n$V11)*3/4),cex=0.7,y=c(mean(n$V11),median(n$V11)),pos=3,labels=c(paste('mean=',mean(n$V11),sep=''),paste('median=',median(n$V11),sep='')))
+text(x=c(length(n$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+hist(n$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for nodoms",xlim=c(0,5))
+plot(n$V7,n$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for non-domain regions")
+
+
+g<-genetablefilter
+g<-arrange(g,desc(V11))
+plot(g$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across genes")
+abline(h=mean(g$V11))
+abline(h=median(g$V11))
+text(x=c(length(g$V11)*3/4,length(g$V11)*3/4),cex=0.7,y=c(mean(g$V11),median(g$V11)),pos=3,labels=c(paste('mean=',mean(g$V11),sep=''),paste('median=',median(g$V11),sep='')))
+text(x=c(length(g$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+hist(g$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for genes",xlim=c(0,5))
+plot(g$V7,g$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for genes")
+
+gu<-uniqgenetablefilter
+gu<-arrange(gu,desc(V11))
+plot(gu$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across genes without nodoms")
+abline(h=mean(gu$V11))
+abline(h=median(gu$V11))
+text(x=c(length(gu$V11)*3/4,length(gu$V11)*3/4),cex=0.7,y=c(mean(gu$V11),median(gu$V11)),pos=3,labels=c(paste('mean=',mean(gu$V11),sep=''),paste('median=',median(gu$V11),sep='')))
+text(x=c(length(gu$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+hist(gu$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for genes without nodoms",xlim=c(0,5))
+plot(gu$V7,gu$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of genes without nodoms")
+
+r<-regionstable
+r<-arrange(r,desc(V11))
+plot(r$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across all protein regions")
+abline(h=mean(r$V11))
+abline(h=median(r$V11))
+text(x=c(length(r$V11)*3/4,length(r$V11)*3/4),cex=0.7,y=c(mean(r$V11),median(r$V11)),pos=3,labels=c(paste('mean=',mean(r$V11),sep=''),paste('median=',median(r$V11),sep='')))
+text(x=c(length(r$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+hist(r$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for all protein regions",xlim=c(0,5))
+plot(r$V7,r$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for all protein regions")
 
 #for density plots and other plots
 

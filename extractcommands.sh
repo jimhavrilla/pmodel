@@ -43,7 +43,7 @@ python seltrans.py <(sort -k2,2 -k3,3 $DATA/appris_data.principal.txt | grep -v 
 
 # use appris to remove non-canonical transcripts; sort by ENSL gene_id and Pfam autoreg to merge uniqids into single domain
 
-awk 'NR==FNR{a[$2];next}$29 in a{print $0}' $DATA/transcripts.txt $DATA/foo.bed | tr -s " " "\t" | sort -k27,27 -k25,25 -k1,1 -k2,2n -k3,3n > $DATA/blah.txt; mv $DATA/blah.txt $DATA/foo.bed
+awk 'NR==FNR{a[$2];next}$29 in a{print $0}' $DATA/transcripts.txt $DATA/foo.bed | tr -s " " "\t" | sort -k27,27 -k11,11 -k25,25 -k1,1 -k2,2n -k3,3n > $DATA/blah.txt; mv $DATA/blah.txt $DATA/foo.bed
 
 # domain coverage and rearranging:  // based on histograms, used 5x as a filter
 
@@ -114,11 +114,16 @@ python mergetable.py -f $DATA/foo.bed $DATA/human_pfam.counts $DATA/sumlist.bed 
 # by uniqid a table
 
 gawk 'function median(v) {c=asort(v,j); if (c % 2) return j[(c+1)/2]; else return (j[c/2+1]+j[c/2])/2.0} {{if ($15=="ds") {sct[$7 $12]++; ct[$7 $12]++} else if ($15=="dn") nct[$7 $12]++; ct[$7 $12]++} len[$7 $12]=$11; maf[$7 $12][$1 $2 $3 $15]=$13; row[$7 $12]=$6 " " $12 " " $7 " " $8 " " $9 " " $10 " " $11} END {for (i in ct) print row[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/len[i],median(maf[i])}' <(grep -v NoDom $DATA/allint2uniqfilter.bed) > $DATA/uniqtablefilter.txt
+gawk 'function median(v) {c=asort(v,j); if (c % 2) return j[(c+1)/2]; else return (j[c/2+1]+j[c/2])/2.0} {{if ($15=="ds") {sct[$8 $12]++; ct[$8 $12]++} else if ($15=="dn") nct[$8 $12]++; ct[$8 $12]++} len[$8 $12]=$11; maf[$8 $12][$1 $2 $3 $15]=$13; row[$8 $12]=$6 " " $12 " " $7 " " $8 " " $9 " " $10 " " $11} END {for (i in ct) print row[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/len[i],median(maf[i])}' <(grep NoDom $DATA/allint2uniqfilter.bed) | awk '{print $1,$2,$4,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13}' > $DATA/nodomtablefilter.txt
 
-gawk 'function median(v) {c=asort(v,j); if (c % 2) return j[(c+1)/2]; else return (j[c/2+1]+j[c/2])/2.0} {{if ($15=="ds") {sct[$8 $12]++; ct[$8 $12]++} else if ($15=="dn") nct[$8 $12]++; ct[$8 $12]++} len[$8 $12]=$11; maf[$8 $12][$1 $2 $3 $15]=$13; row[$8 $12]=$6 " " $12 " " $7 " " $8 " " $9 " " $10 " " $11} END {for (i in ct) print row[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/len[i],median(maf[i])}' <(grep NoDom $DATA/allint2uniqfilter.bed) > $DATA/nodomtablefilter.txt
+bedtools intersect -a <(awk '{$13=$33; print $0}' OFS="\t" $DATA/alluniq.bed | cut -f 1,2,3,11,13,25,27,43,45,46,47,48 | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3.vcf -v -sorted | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18 > $DATA/nointsuniq.txt
+bedtools intersect -a <(cut -f 1,2,3,12,24,25,26,27 $DATA/nodom.bed | awk '{t=$8;$8=$7;$7=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf -v -sorted | cut -f 1,2,3,4,5,6,7,8,12,13,16 | awk '{print $1,$2,$3,".",$4,$5,$5,$6,$7,$8}' > $DATA/nointsnodom.txt
+python noints.py $DATA/uniqtablefilter.txt $DATA/nointsuniq.txt
+python noints.py $DATA/nodomtablefilter.txt $DATA/nointsnodom.txt
+awk 'NR==FNR{a[$2]=$3} NR!=FNR{if ($1 in a) print $0,a[$1]; else print $0,0}' $DATA/human_pfam.counts $DATA/uniqtablefilter.txt > $DATA/foo2; mv $DATA/foo2 $DATA/uniqtablefilter.txt
+awk 'NR==FNR{a[$2]=$3} NR!=FNR{if ($1 in a) print $0,a[$1]; else print $0,0}' $DATA/human_pfam.counts $DATA/nodomtablefilter.txt > $DATA/foo2; mv $DATA/foo2 $DATA/nodomtablefilter.txt
+cat $DATA/nodomtablefilter.txt $DATA/uniqtablefilter.txt | sort -k11,11nr > $DATA/regionstable.txt
 
-bedtools intersect -a <(awk '{$13=$33; print $0}' OFS="\t" $DATA/alluniq.bed | cut -f 1,2,3,11,13,25,27,43,45,46,47,48 | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3.vcf -v -sorted | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18 > $DATA/noints.txt
-python noints.py $DATA/uniqtablefilter.txt $DATA/noints.txt
 
 # by gene a table
 
@@ -135,6 +140,20 @@ END {
                 print row[i],leng[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/(leng[i]==0? leng[i]+1: leng[i]),median(maf[i])
         }
 }' $DATA/allint2uniqfilter.bed | tr -s " " "\t" | sort -k11,11nr > $DATA/genetablefilter.txt
+
+gawk 'function median(v) {c=asort(v,k); if (c % 2) return k[(c+1)/2]; else return (k[c/2+1]+k[c/2])/2.0} {{if ($15=="ds") {sct[$12]++; ct[$12]++} else if ($15=="dn") nct[$12]++; ct[$12]++} auto[$7]=$7; len[$12 $7]=$11; maf[$12][$1 $2 $3 $15]=$13; row[$12]=$12}
+END {
+        for (l in row) {
+                for (j in auto) {
+                        leng[l]+=len[l j]
+                }
+        }
+}
+END {
+        for (i in row) {
+                print row[i],leng[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/(leng[i]==0? leng[i]+1: leng[i]),median(maf[i])
+        }
+}' <(grep -v NoDom $DATA/allint2uniqfilter.bed) | tr -s " " "\t" | sort -k11,11nr > $DATA/uniqgenetablefilter.txt
 
 # divergence by domain table
 
