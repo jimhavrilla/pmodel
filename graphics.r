@@ -30,24 +30,24 @@ plot(n$V7,n$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for n
 
 
 g<-genetablefilter
-g<-arrange(g,desc(V11))
-plot(g$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across genes")
-abline(h=mean(g$V11))
-abline(h=median(g$V11))
-text(x=c(length(g$V11)*3/4,length(g$V11)*3/4),cex=0.7,y=c(mean(g$V11),median(g$V11)),pos=3,labels=c(paste('mean=',mean(g$V11),sep=''),paste('median=',median(g$V11),sep='')))
-text(x=c(length(g$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
-hist(g$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for genes",xlim=c(0,5))
-plot(g$V7,g$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for genes")
+g<-arrange(g,desc(V6))
+plot(g$V6,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across genes")
+abline(h=mean(g$V6))
+abline(h=median(g$V6))
+text(x=c(length(g$V6)*3/4,length(g$V6)*3/4),cex=0.7,y=c(mean(g$V6),median(g$V6)),pos=3,labels=c(paste('mean=',mean(g$V6),sep=''),paste('median=',median(g$V6),sep='')))
+text(x=c(length(g$V6)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+hist(g$V6,breaks=100,xlab="dN/dS",main="dN/dS distribution for genes",xlim=c(0,5))
+plot(g$V2,g$V6,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for genes")
 
 gu<-uniqgenetablefilter
-gu<-arrange(gu,desc(V11))
-plot(gu$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across genes without nodoms")
-abline(h=mean(gu$V11))
-abline(h=median(gu$V11))
-text(x=c(length(gu$V11)*3/4,length(gu$V11)*3/4),cex=0.7,y=c(mean(gu$V11),median(gu$V11)),pos=3,labels=c(paste('mean=',mean(gu$V11),sep=''),paste('median=',median(gu$V11),sep='')))
-text(x=c(length(gu$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
-hist(gu$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for genes without nodoms",xlim=c(0,5))
-plot(gu$V7,gu$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of genes without nodoms")
+gu<-arrange(gu,desc(V6))
+plot(gu$V6,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across genes without nodoms")
+abline(h=mean(gu$V6))
+abline(h=median(gu$V6))
+text(x=c(length(gu$V6)*3/4,length(gu$V6)*3/4),cex=0.7,y=c(mean(gu$V6),median(gu$V6)),pos=3,labels=c(paste('mean=',mean(gu$V6),sep=''),paste('median=',median(gu$V6),sep='')))
+text(x=c(length(gu$V6)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+hist(gu$V6,breaks=100,xlab="dN/dS",main="dN/dS distribution for genes without nodoms",xlim=c(0,5))
+plot(gu$V2,gu$V6,xlab="length",ylab="dn/ds",main="dN/dS vs length of genes without nodoms")
 
 r<-regionstable
 r<-arrange(r,desc(V11))
