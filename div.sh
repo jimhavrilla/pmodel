@@ -10,7 +10,7 @@ case "$1" in
 		#calculates median maf, counts
 		gawk 'function median(v) {c=asort(v,j); if (c % 2) return j[(c+1)/2]; else return (j[c/2+1]+j[c/2])/2.0} {{if ($15=="ds") {sct[$7 $12]++; ct[$7 $12]++} else if ($15=="dn") nct[$7 $12]++; ct[$7 $12]++} len[$7 $12]=$11; maf[$7 $12][$1 $2 $3 $15]=$13; row[$7 $12]=$6 " " $12 " " $7 " " $8 " " $9 " " $10 " " $11} END {for (i in ct) print row[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/len[i],median(maf[i])}' $DATA/allint2uniqfilter.$MOD.$MAF1-$MAF2.bed | grep -v -w '\.' | awk '{if ($11>=0) print}' | sort -k11,11nr > $DATA/uniqtablefilter.$MOD.$MAF1-$MAF2.txt
 
-		gawk 'function median(v) {c=asort(v,j); if (c % 2) return j[(c+1)/2]; else return (j[c/2+1]+j[c/2])/2.0} {{if ($15=="ds") {sct[$8 $12]++; ct[$8 $12]++} else if ($15=="dn") nct[$8 $12]++; ct[$8 $12]++} len[$8 $12]=$11; maf[$8 $12][$1 $2 $3 $15]=$13; row[$8 $12]=$6 " " $12 " " $7 " " $8 " " $9 " " $10 " " $11} END {for (i in ct) print row[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/len[i],median(maf[i])}' <(grep NoDom $DATA/allint2uniqfilter.bed) | awk '{print $1,$2,$4,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13}' > $DATA/nodomtablefilter.$MOD.$MAF1-$MAF2.txt
+		gawk 'function median(v) {c=asort(v,j); if (c % 2) return j[(c+1)/2]; else return (j[c/2+1]+j[c/2])/2.0} {{if ($15=="ds") {sct[$8 $12]++; ct[$8 $12]++} else if ($15=="dn") nct[$8 $12]++; ct[$8 $12]++} len[$8 $12]=$11; maf[$8 $12][$1 $2 $3 $15]=$13; row[$8 $12]=$6 " " $12 " " $7 " " $8 " " $9 " " $10 " " $11} END {for (i in ct) print row[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/len[i],median(maf[i])}' <(grep NoDom $DATA/allint2uniqfilter.$MOD.$MAF1-$MAF2.bed) | awk '{print $1,$2,$4,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13}' > $DATA/nodomtablefilter.$MOD.$MAF1-$MAF2.txt
 
 		bedtools intersect -a <(awk '{$13=$33; print $0}' OFS="\t" $DATA/alluniq.bed | cut -f 1,2,3,11,13,25,27,43,45,46,47,48 | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf -v -sorted | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18 > $DATA/nointsuniq.$MOD.$MAF1-$MAF2.txt
 		bedtools intersect -a <(cut -f 1,2,3,12,24,25,26,27 $DATA/nodom.bed | awk '{t=$8;$8=$7;$7=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf -v -sorted | cut -f 1,2,3,4,5,6,7,8,12,13,16 | awk '{print $1,$2,$3,".",$4,$5,$5,$6,$7,$8}' > $DATA/nointsnodom.$MOD.$MAF1-$MAF2.txt
@@ -33,7 +33,7 @@ case "$1" in
 		        for (i in row) {
 		                print row[i],leng[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/(leng[i]==0? leng[i]+1: leng[i]),median(maf[i])
 		        }
-		}' $DATA/allint2uniqfilter.bed | tr -s " " "\t" | sort -k11,11nr > $DATA/genetablefilter.txt
+		}' $DATA/allint2uniqfilter.$MOD.$MAF1-$MAF2.bed | tr -s " " "\t" | sort -k11,11nr > $DATA/genetablefilter.$MOD.$MAF1-$MAF2.txt
 
 		gawk 'function median(v) {c=asort(v,k); if (c % 2) return k[(c+1)/2]; else return (k[c/2+1]+k[c/2])/2.0} {{if ($15=="ds") {sct[$12]++; ct[$12]++} else if ($15=="dn") nct[$12]++; ct[$12]++} auto[$7]=$7; len[$12 $7]=$11; maf[$12][$1 $2 $3 $15]=$13; row[$12]=$12}
 		END {
@@ -47,7 +47,7 @@ case "$1" in
 		        for (i in row) {
 		                print row[i],leng[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/(leng[i]==0? leng[i]+1: leng[i]),median(maf[i])
 		        }
-		}' <(grep -v NoDom $DATA/allint2uniqfilter.bed) | tr -s " " "\t" | sort -k11,11nr > $DATA/uniqgenetablefilter.txt
+		}' <(grep -v NoDom $DATA/allint2uniqfilter.$MOD.$MAF1-$MAF2.bed) | tr -s " " "\t" | sort -k11,11nr > $DATA/uniqgenetablefilter.$MOD.$MAF1-$MAF2.txt
 		
 		#grep -v -w "\." $DATA/uniqtable.$MOD.$MAF1-$MAF2.txt | awk '{if ($6==1) print}' | sort -k1,1 -k2,2 | python dg.py -u | sort -k2,2 -k3,3 | python diverge.py -u | awk '{if ($4>3) print $0}'| awk '{uniq[$1 $2]=$1; row[$1 $2]=$0; gene[$1]=$13} END {for (i in gene) ct++} END {for (i in gene) for (j in gene) {if (gene[i]>=gene[j]) rank[i]++}} END {for (j in uniq) for (i in gene) {if (i==uniq[j]) print row[j],rank[i]/ct}}' | tr -s " " "\t" | sort -k17,17nr  > $DATA/diverge.pair.txt
 
