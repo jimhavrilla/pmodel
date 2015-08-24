@@ -3,61 +3,91 @@
 #generate dn/ds distro plots
 
 library(dplyr)
-uniqtablefilter <- read.table("~/work/data/pmodeldata/uniqtablefilter.txt", quote="\"")
+uniqtablefilter <- read.table("~/work/data/pmodeldata/uniqtablefilter.g.0.0001-.txt", quote="\"")
+u<-uniqtablefilter
 u<-arrange(u,desc(V11))
-# dnds dist
-plot(u$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across domain regions")
+plot(u$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across domain regions") # dnds dist
 abline(h=mean(u$V11))
 abline(h=median(u$V11))
 text(x=c(length(u$V11)*3/4,length(u$V11)*3/4),cex=0.7,y=c(mean(u$V11),median(u$V11)),pos=3,labels=c(paste('mean=',mean(u$V11),sep=''),paste('median=',median(u$V11),sep='')))
-text(x=c(length(u$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
-# histogram
-hist(u$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for domains",xlim=c(0,5))
-# length vs dnds
-plot(u$V7,u$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for domain regions")
-# domain counts vs dnds
-plot(u$V14,u$V11,xlab="domain count across genome",ylab="dn/ds",main="dN/dS vs domain prevalence")
+text(x=c(length(n$V11)*.3),y=5,labels=c("MAF>0.001%")) ## for common
+hist(u$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for domains",xlim=c(0,5)) # histogram
+legend('topright','MAF>0.001%',bty='n') ## for common
+plot(u$V7,u$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for domain regions") # length vs dnds
+legend('topright','MAF>0.001%',bty='n') ## for common
+plot(u$V14,u$V11,xlab="domain count across genome",ylab="dn/ds",main="dN/dS vs domain prevalence") # domain counts vs dnds
+legend('topright','MAF>0.001%',bty='n') ## for common
+plot(u$V12,u$V11,xlab="density",ylab="dn/ds",main="dN/dS vs density of region for domain regions")
+legend('topright','MAF>0.001%',bty='n') ## for common
 
+nodomtablefilter <- read.table("~/work/data/pmodeldata/nodomtablefilter.g.0.0001-.txt", quote="\"")
 n<-nodomtablefilter
 n<-arrange(n,desc(V11))
 plot(n$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across non-domain regions")
 abline(h=mean(n$V11))
 abline(h=median(n$V11))
 text(x=c(length(n$V11)*3/4,length(n$V11)*3/4),cex=0.7,y=c(mean(n$V11),median(n$V11)),pos=3,labels=c(paste('mean=',mean(n$V11),sep=''),paste('median=',median(n$V11),sep='')))
-text(x=c(length(n$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
-hist(n$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for nodoms",xlim=c(0,5))
+text(x=c(length(n$V11)*.3),y=5,labels=c("MAF>0.001%")) ## for common
+hist(n$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for non-domain regions",xlim=c(0,5))
+legend('topright','MAF>0.001%',bty='n') ## for common
 plot(n$V7,n$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for non-domain regions")
+legend('topright','MAF>0.001%',bty='n') ## for common
+plot(n$V12,n$V11,xlab="density",ylab="dn/ds",main="dN/dS vs density of region for non-domain regions")
+legend('topright','MAF>0.001%',bty='n') ## for common
 
-
+genetablefilter <- read.table("~/work/data/pmodeldata/genetablefilter.g.0.0001-.txt", quote="\"")
 g<-genetablefilter
 g<-arrange(g,desc(V6))
+png("~/Documents/workimages/maf0.01/genednds.png",width=1603,height=800,units="px")
 plot(g$V6,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across genes")
 abline(h=mean(g$V6))
 abline(h=median(g$V6))
 text(x=c(length(g$V6)*3/4,length(g$V6)*3/4),cex=0.7,y=c(mean(g$V6),median(g$V6)),pos=3,labels=c(paste('mean=',mean(g$V6),sep=''),paste('median=',median(g$V6),sep='')))
-text(x=c(length(g$V6)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+text(x=c(length(g$V6)*.3),y=5,labels=c("MAF>0.001%")) ## for common
+dev.off()
+png("~/Documents/workimages/maf0.01/genedndshist.png",width=1603,height=800,units="px")
 hist(g$V6,breaks=100,xlab="dN/dS",main="dN/dS distribution for genes",xlim=c(0,5))
+legend('topright','MAF>0.001%',bty='n') ## for common
+dev.off()
+png("~/Documents/workimages/maf0.01/genedndslength.png",width=1603,height=800,units="px")
 plot(g$V2,g$V6,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for genes")
+legend('topright','MAF>0.001%',bty='n') ## for common
+dev.off()
+png("~/Documents/workimages/maf0.01/genedndsdensity.png",width=1603,height=800,units="px")
+plot(g$V7,g$V6,xlab="density",ylab="dn/ds",main="dN/dS vs density of region for genes")
+legend('topright','MAF>0.001%',bty='n') ## for common
+dev.off()
 
+uniqgenetablefilter <- read.table("~/work/data/pmodeldata/uniqgenetablefilter.g.0.0001-.txt", quote="\"")
 gu<-uniqgenetablefilter
 gu<-arrange(gu,desc(V6))
 plot(gu$V6,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across genes without nodoms")
 abline(h=mean(gu$V6))
 abline(h=median(gu$V6))
 text(x=c(length(gu$V6)*3/4,length(gu$V6)*3/4),cex=0.7,y=c(mean(gu$V6),median(gu$V6)),pos=3,labels=c(paste('mean=',mean(gu$V6),sep=''),paste('median=',median(gu$V6),sep='')))
-text(x=c(length(gu$V6)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+text(x=c(length(gu$V6)*.3),y=5,labels=c("MAF>0.001%")) ## for common
 hist(gu$V6,breaks=100,xlab="dN/dS",main="dN/dS distribution for genes without nodoms",xlim=c(0,5))
+legend('topright','MAF>0.001%',bty='n') ## for common
 plot(gu$V2,gu$V6,xlab="length",ylab="dn/ds",main="dN/dS vs length of genes without nodoms")
+legend('topright','MAF>0.001%',bty='n') ## for common
+plot(gu$V7,gu$V6,xlab="density",ylab="dn/ds",main="dN/dS vs density of region for genes without nodoms")
+legend('topright','MAF>0.001%',bty='n') ## for common
 
+regionstable <- read.table("~/work/data/pmodeldata/regionstable.g.0.0001-.txt", quote="\"")
 r<-regionstable
 r<-arrange(r,desc(V11))
 plot(r$V11,ylim=c(0,6),ylab="dn/ds",main="dN/dS distribution across all protein regions")
 abline(h=mean(r$V11))
 abline(h=median(r$V11))
 text(x=c(length(r$V11)*3/4,length(r$V11)*3/4),cex=0.7,y=c(mean(r$V11),median(r$V11)),pos=3,labels=c(paste('mean=',mean(r$V11),sep=''),paste('median=',median(r$V11),sep='')))
-text(x=c(length(r$V11)*.3),y=5,labels=c("MAF>0.1%")) ## for common
+text(x=c(length(r$V11)*.3),y=5,labels=c("MAF>0.001%")) ## for common
 hist(r$V11,breaks=100,xlab="dN/dS",main="dN/dS distribution for all protein regions",xlim=c(0,5))
+legend('topright','MAF>0.001%',bty='n') ## for common
 plot(r$V7,r$V11,xlab="length",ylab="dn/ds",main="dN/dS vs length of region for all protein regions")
+legend('topright','MAF>0.001%',bty='n') ## for common
+plot(r$V12,r$V11,xlab="density",ylab="dn/ds",main="dN/dS vs density of region for all protein regions")
+legend('topright','MAF>0.001%',bty='n') ## for common
+
 
 #for density plots and other plots
 

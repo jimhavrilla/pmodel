@@ -36,7 +36,7 @@ if options.bool==True:
 			for impact in CSQ.lstrip("CSQ=").split(","):
 				toks = impact.split("|")
 				r_.csq="\t".join([x if x!="" else "." for x in toks]) # adds nodom domain field
-				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,z,".",".",r_.uniqid,r_.covct,r_.len,r_.covratio,r_.gene,y,r_.csq])
+				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,z,".",r_.uniqid,r_.uniqid,r_.covct,r_.len,r_.covratio,r_.gene,y,r_.csq])
 			ct=ct+1
 
 if options.bool==False:
