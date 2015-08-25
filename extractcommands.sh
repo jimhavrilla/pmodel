@@ -91,7 +91,7 @@ cat $DATA/alldom.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {fo
 
 # make db for queries AND filter variants by canonical transcripts
 
-bash makedb.sh $DATA/varfilter.db <(awk 'NR==FNR{a[$2];next}$19 in a{print $0}' $DATA/transcripts.txt <(sed '1d' $DATA/allint.bed)) 
+bash makedb.sh $DATA/varfilter.db <(awk 'NR==FNR{a[$2];next}$19 in a{print $0}' $DATA/transcripts.txt <(sed '1d' $DATA/allintfilter.bed)) 
 
 # pick one impact per variant for domains
 
@@ -181,7 +181,8 @@ bash limit.sh $DATA g 0.001
 
 # high dn/ds regions: 
 # test for hgtables repeats and generate dn/ds file with coords
-gawk 'NR==FNR{a[$4 $5][$1 $2 $3]=$1 " " $2 " " $3} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0}}' <(cut -f 1,2,3,25,33 $DATA/alluniq.bed) <(cut -d " " -f 1,2,3,7,8,9,11 $DATA/uniqtablefilter.txt | grep -v -w '\.') | tr -s " " "\t" | sort -k1,1 -k2,2n > $DATA/domaincoordsdnds.bed
+gawk 'NR==FNR{a[$4 $5][$1 $2 $3]=$1 " " $2 " " $3} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0}}' <(cut -f 1,2,3,25,33 $DATA/alluniq.bed) <(cut -d " " -f 1,2,3,7,8,9,11 $DATA/uniqtablefilter.txt) | tr -s " " "\t" | sort -k1,1 -k2,2n > $DATA/domaincoordsdnds.bed
+gawk 'NR==FNR{a[$4 $5][$1 $2 $3]=$1 " " $2 " " $3} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0}}' <(cut -f 1,2,3,12,24 $DATA/nodom.bed | awk '{t=$5; $5=$4; $4=t; print}' OFS='\t') <(cut -d " " -f 1,2,3,7,8,9,11 $DATA/nodomtablefilter.txt) | tr -s " " "\t" | sort -k1,1 -k2,2n >> $DATA/domaincoordsdnds.bed
 awk '{if ($9 >= 10) print $0}' $DATA/domaincoordsdnds.bed | wc -l # how many domain regions for each dn/ds?
 grep -v "_ND" $DATA/uniqtable.txt | awk '{if ($11 >= 10) print $0}' | wc -l # how many autoregs for each dn/ds?
 
