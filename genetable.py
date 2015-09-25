@@ -10,11 +10,10 @@ class Vars(object):
 		self.chr=fields[0]
 		self.start=fields[1]
 		self.end=fields[2]
-		self.ccdsid=fields[3]
 		self.autoreg=fields[6]
-		self.length=fields[10]
+		self.length=float(fields[10])
 		self.gene=fields[11]
-		self.maf=fields[12]
+		self.maf=float(fields[12])
 		self.type=fields[14]
 
 f1=open(sys.argv[1],"r")
@@ -28,32 +27,40 @@ maf=col.defaultdict(list)
 length={}
 glen={}
 
-#dict.update if tuple or list, dict.add if single value
-
 for line in f1:
 	v=Vars(line.rstrip().split("\t"))
 	genes.add(v.gene)
 	auto.add(v.autoreg)
-	if v.type="ds":
-		sct[v.gene]=foo.get(sct,0)+1
-		ct[v.gene]=foo.get(ct,0)+1
-	if v.type="dn":
-		nct[v.gene]=foo.get(nct,0)+1
-		ct[v.gene]=foo.get(ct,0)+1
+	if v.type=="ds":
+		sct[v.gene]=sct.get(v.gene,float(0))+float(1)
+		ct[v.gene]=ct.get(v.gene,float(0))+float(1)
+	if v.type=="dn":
+		nct[v.gene]=nct.get(v.gene,float(0))+float(1)
+		ct[v.gene]=ct.get(v.gene,float(0))+float(1)
 	maf[v.gene].append({v.chr+v.start+v.end+v.type:v.maf})
-	length[v.gene,v.autoreg]=v.length
+	length[(v.gene,v.autoreg)]=v.length
 
 f1.close()
 
 for i in genes:
 	for j in auto:
-		glen[i]+=length[i,j]
-	if sct[i]==0:
-		s=1
-	else:
-		s=sct[i]
+		try:
+			glen[i]+=float(length[(i,j)])
+		except KeyError:
+		 	glen[i]=glen.get(i,float(0))
+	try:
+		if sct[i]==0:
+			s=1
+		else:
+			s=sct[i]
+	except KeyError:
+		sct[i]=0; s=float(1)
+	try:
+		assert nct[i]
+	except KeyError:
+		nct[i]=0
 	if glen[i]==0:
-		g=1
+		g=float(1)
 	else:
 		g=glen[i]
-	print i,glen[i],nct[i],sct[i],nct[i]+sct[i],nct[i]/s,(nct[i]+sct[i])/glen[i],np.median([k.values()[0] for k in maf[i]])
+	print i,int(glen[i]),int(nct[i]),int(sct[i]),int(nct[i]+sct[i]),nct[i]/s,(nct[i]+sct[i])/g,np.median([k.values()[0] for k in maf[i]])

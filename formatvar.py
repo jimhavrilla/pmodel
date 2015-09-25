@@ -13,8 +13,8 @@ class Record1(object):
 		self.autoreg = fields[6]
 		self.uniqid = fields[7]
 		self.covct = fields[8]
-		self.len = fields[9]
-		self.covratio = fields[10]
+		self.covratio = fields[9]
+		self.len = fields[10]
 		self.gene = fields[11]
 		self.maf = fields[12]
 		self.impact = fields[13]
@@ -46,7 +46,7 @@ old_r=None
 old_c=None
 impact_list=[]
 for line in sys.stdin:
-	fields=line.rstrip().split("|")
+	fields=line.rstrip().split("\t")
 	r_=Record1(fields)
 	c_=Csq();c_.impact=r_.impact;c_.info=r_.info
 	if old_r!=None:

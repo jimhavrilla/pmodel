@@ -11,10 +11,10 @@ mysql -N --raw -h wrpxdb.its.virginia.edu -u web_user -pfasta_www pfam27 < count
 #for vcfs:
 
 #grep ^# $DATA/ESP6500SI-V2-SSA137.updatedRsIds.chr1.snps_indels.vcf; grep -v ^# -h $DATA/ESP*.vcf) > $DATA/foo.vcf; mv $DATA/foo.vcf $DATA/ESPALL.vcf
-#perl $SOFTWARE/ensembl-tools-release-76/scripts/variant_effect_predictor/variant_effect_predictor.pl -i $DATA/ESPALL.vcf --cache --sift b --polyphen b --symbol --numbers --biotype --total_length -o $DATA/VEPESPALL.vcf --vcf --fields Consequence,Codons,Amino_acids,Gene,SYMBOL,Feature,EXON,PolyPhen,SIFT,Protein_position,BIOTYPE --force_overwrite --port 3337 --dir ~/.vep/ --compress "gunzip -c"
-sudo perl $SOFTWARE/ensembl-tools-release-76/scripts/variant_effect_predictor/variant_effect_predictor.pl -i $DATA/ExAC.r0.3.sites.vep.vcf.gz --cache --sift b --polyphen b --symbol --numbers --biotype --total_length -o $DATA/VEPEXAC3.vcf --vcf --fields Consequence,Codons,Amino_acids,Gene,SYMBOL,Feature,EXON,PolyPhen,SIFT,Protein_position,BIOTYPE --force_overwrite --port 3337 --dir ~/.vep/ --compress "gunzip -c" --offline
-gzcat $DATA/Homo_sapiens.GRCh37.75.gtf.gz | grep protein_coding$'\t'exon | perl -pe 's/protein_coding\texon\t//g' | grep -P '^\d*[0-9X-Y]\t' | perl gtf2bed.pl | sort -k10,10 > $DATA/exons.bed
-gzcat $DATA/Homo_sapiens.GRCh37.75.gtf.gz | grep protein_coding$'\t'UTR | perl -pe 's/protein_coding\tUTR\t//g' | grep -P '^\d*[0-9X-Y]\t' | perl gtf2bed.pl | sort -k10,10 > $DATA/utrs.bed
+#perl $SOFTWARE/ensembl-tools-release-81/scripts/variant_effect_predictor/variant_effect_predictor.pl -i $DATA/ESPALL.vcf --cache --sift b --polyphen b --symbol --numbers --biotype --total_length -o $DATA/VEPESPALL.vcf --vcf --fields Consequence,Codons,Amino_acids,Gene,SYMBOL,Feature,EXON,PolyPhen,SIFT,Protein_position,BIOTYPE --force_overwrite --port 3337 --dir ~/.vep/ --compress "gunzip -c"
+perl $SOFTWARE/ensembl-tools-release-81/scripts/variant_effect_predictor/variant_effect_predictor.pl -i $DATA/ExAC.r0.3.sites.vep.vcf.gz --cache --merged --sift b --polyphen b --symbol --numbers --biotype --total_length --allele_number -o $DATA/VEPEXAC3.vcf --vcf --fields Consequence,Codons,Amino_acids,Gene,SYMBOL,Feature,EXON,PolyPhen,SIFT,Protein_position,BIOTYPE,ALLELE_NUM --force_overwrite --port 3337 --dir ~/.vep/ --compress "gunzip -c" --offline
+zcat $DATA/Homo_sapiens.GRCh37.75.gtf.gz | grep protein_coding$'\t'exon | perl -pe 's/protein_coding\texon\t//g' | grep -P '^\d*[0-9X-Y]\t' | perl gtf2bed.pl | sort -k10,10 > $DATA/exons.bed
+zcat $DATA/Homo_sapiens.GRCh37.75.gtf.gz | grep protein_coding$'\t'UTR | perl -pe 's/protein_coding\tUTR\t//g' | grep -P '^\d*[0-9X-Y]\t' | perl gtf2bed.pl | sort -k10,10 > $DATA/utrs.bed
 python filterutrs.py $DATA/exons.bed $DATA/utrs.bed > $DATA/GRCh37.bed
 #grep -v -E "C|G" $DATA/mart_export.bed | sort -k1,1 -k2,2n | sed '395352d' > foo.bed; mv foo.bed $DATA/mart_export.bed; # human genes from Ensembl
 
@@ -62,7 +62,7 @@ sort -k11,11 -k1,1 -k2,2n $DATA/foo.bed | python rearrange2.py -d > $DATA/alldom
 python nodom.py <(perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | perl -pe 's/"|;//g' | awk 'NR==FNR{a[$2];next}$10 in a{print}' $DATA/transcripts.txt - | tr -s " " "\t" | sort -k10,10 | uniq) <(awk '{split($15,trans,","); for (i in trans) print $1,$2,$3,$13,$25,trans[i],$43}' $DATA/alluniq.bed | sort -k6,6 | tr -s " " "\t" | uniq) > $DATA/foo
 
 bedtools intersect -a <(sort -k1,1 -k2,2n $DATA/foo | uniq) -b <(awk '{if ($4>=5) print}' $DATA/coverage.bed) -wa -wb -sorted \
-| awk '{ct[$1 $2 $3 $8 $24]++; len[$1 $2 $3 $8 $24]=$4; row[$1 $2 $3 $8 $24]=$0} END {for (i in ct) print row[i],(ct[i]==0 ? ct[i]=0: ct[i]),(len[i]==0 ? len[i]=1: len[i]),ct[i]/(len[i]==0 ? len[i]=1: len[i])}' \
+| awk '{ct[$1 $2 $3 $8 $24]++; len[$1 $2 $3 $8 $24]=$4; row[$1 $2 $3 $8 $24]=$0} END {for (i in row) print row[i],(ct[i]==0 ? ct[i]=0: ct[i]),(len[i]==0 ? len[i]=1: len[i]),ct[i]/(len[i]==0 ? len[i]=1: len[i])}' \
 | tr -s " " "\t" | cut -f -24,29- | sort -k1,1 -k2,2n > $DATA/nodom.bed; rm $DATA/foo
 
 cat $DATA/alluniq.bed $DATA/nodom.bed | sort -k1,1 -k2,2n | cat <(printf "#header for nodoms:\n#chr,start,end,length,info\n#info field contains gene_id, transcript_id, exon_number, gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, near_pfamA_id (if applicable, describes what domain it is near), uniq_id\n#header for domains separated by exon:\n#chr,start,end,length,pfam_database_ver,type_of_sequence,blank_field,strand,blank_field2,info\n#info field contains pfamA_id, gene_name, transcript_id, protein_id, pfamseq_acc, pfamseq_id, pfamA_acc, pfamA_auto_reg, gene_id, matched_transcript_id, expn_number, matched_gene_name, gene_source, gene_biotype, transcript_name, transcript_source, exon_id, uniq_id, ccds_id (if applicable)\n") - > $DATA/allregions.bed
@@ -75,11 +75,13 @@ cat <(grep "^#" $DATA/VEPEXAC3.vcf) <(grep -v "^#" $DATA/VEPEXAC3.vcf | awk -F '
 cat  <(grep "^#" $DATA/VEPEXAC3filter.vcf) <(grep -v "^#" $DATA/VEPEXAC3filter.vcf | awk -F ';' '{t=$1; sub(/.+=/,"",t); if (t!=1 && t!="1,1" && t!="1,1,1" && t!="1,1,1,1" && t!="1,1,1,1,1") print}' | sort -k1,1 -k2,2n) > $DATA/VEPEXAC3nosingle.vcf
 #intersectttttt
 bedtools intersect -a <(sort -k1,1 -k2,2n -k3,3n $DATA/alldom.bed | tr -s " " "\t" | cut -f 1,2,3,11,13,45 ) -b $DATA/VEPEXAC3filter.vcf -sorted -wb | cut -f 1,2,3,4,5,6,10,11,14 | python var.py -d > $DATA/domint.bed
-#13=33 makes the pfam gene the ensembl gene because the latter is the correct one.
-bedtools intersect -a <(awk '{$13=$33; print $0}' OFS="\t" $DATA/alluniq.bed | cut -f 1,2,3,11,13,25,27,43,45,46,47,48 | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18 | python var.py -d > $DATA/uniqintfilter.bed
+#33 because pfam gene is wrong the ensembl gene is the correct one.
+bedtools intersect -a <(cut -f 1,2,3,11,25,27,33,43,45,46,47,48 $DATA/alluniq.bed | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18 | python var.py -d > $DATA/uniqintfilter.bed
 bedtools intersect -a <(cut -f 1,2,3,12,24,25,26,27 $DATA/nodom.bed | awk '{t=$8;$8=$7;$7=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf -sorted -wb | cut -f 1,2,3,4,5,6,7,8,12,13,16 | python var.py -n > $DATA/nodomintfilter.bed
 
-cat $DATA/uniqintfilter.bed $DATA/nodomintfilter.bed | cat <(printf "#chr,start,end,ref,alt,pfamA_id,autoreg,uniqid,covct,length_of_region,covratio,gene_symbol,maf,impact,codons,amino_acids,gene_id_csq,gene_symbol_csq,transcript_id_csq,exon_number_csq,polyphen,sift,protein_position,biotype\n") - > $DATA/allintfilter.bed
+# assign types to impacts
+
+cat $DATA/uniqintfilter.bed $DATA/nodomintfilter.bed | cat <(printf "#chr,start,end,ref,alt,pfamA_id,autoreg,uniqid,covct,length_of_region,covratio,gene_symbol,maf,impact,codons,amino_acids,gene_id_csq,gene_symbol_csq,transcript_id_csq,exon_number_csq,polyphen,sift,protein_position,biotype\n") <(awk 'NR==FNR{a[$2];next}$20 in a{print $0}' $DATA/transcripts.txt -) > $DATA/allintfilter.bed
 
 # sort domain occurrence count from bill
 
@@ -89,17 +91,17 @@ sort -k2,2 $DATA/human_pfam.counts > $DATA/blah.bed; mv $DATA/blah.bed $DATA/hum
 
 cat $DATA/alldom.bed | tr -s " " "\t" | cut -f 4,11 | awk '{arr[$2]+=$1} END {for (i in arr) {print i,arr[i]}}' | sort -k1,1 > $DATA/sumlist.bed
 
-# make db for queries AND filter variants by canonical transcripts
-
-bash makedb.sh $DATA/varfilter.db <(awk 'NR==FNR{a[$2];next}$19 in a{print $0}' $DATA/transcripts.txt <(sed '1d' $DATA/allintfilter.bed)) 
-
 # pick one impact per variant for domains
 
 bash query.sh $DATA/var.db '%' g 0 | sort -k6,6 -k8,8 | python formatvar.py > $DATA/allint2dom.bed
 
 # for uniqids
 
-bash query.sh $DATA/varfilter.db '%' g 0 | sort -t '|' -k7,7 -k1,1 -k2,2 -k3,3 | python formatvar.py > $DATA/allint2uniqfilter.bed
+awk 'NR==FNR{a[$2];next}$19 in a{print $0}' $DATA/transcripts.txt <(sed '1d' $DATA/allintfilter.bed) | sort -k7,7 -k1,1 -k2,2 -k3,3 | python formatvar.py | sort -k1,1 -k2,2n > $DATA/allint2uniqfilter.bed
+
+# make db for queries AND filter variants by canonical transcripts
+
+bash makedb.sh $DATA/varfilter.db $DATA/allint2uniqfilter.bed
 
 # do variant analysis by gene and maf (filters out entries that are "na," i.e, not dn or ds)
 
@@ -124,36 +126,47 @@ awk 'NR==FNR{a[$2]=$3} NR!=FNR{if ($1 in a) print $0,a[$1]; else print $0,0}' $D
 awk 'NR==FNR{a[$2]=$3} NR!=FNR{if ($1 in a) print $0,a[$1]; else print $0,0}' $DATA/human_pfam.counts $DATA/nodomtablefilter.txt > $DATA/foo2; mv $DATA/foo2 $DATA/nodomtablefilter.txt
 cat $DATA/nodomtablefilter.txt $DATA/uniqtablefilter.txt | sort -k11,11nr > $DATA/regionstable.txt
 
-
 # by gene a table
 
-gawk 'function median(v) {c=asort(v,k); if (c % 2) return k[(c+1)/2]; else return (k[c/2+1]+k[c/2])/2.0} {{if ($15=="ds") {sct[$12]++; ct[$12]++} else if ($15=="dn") nct[$12]++; ct[$12]++} auto[$7]=$7; len[$12 $7]=$11; maf[$12][$1 $2 $3 $15]=$13; row[$12]=$12}
-END {
-        for (l in row) {
-                for (j in auto) {
-                        leng[l]+=len[l j]
-                }
-        }
-}
-END {
-        for (i in row) {
-                print row[i],leng[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/(leng[i]==0? leng[i]+1: leng[i]),median(maf[i])
-        }
-}' $DATA/allint2uniqfilter.bed | tr -s " " "\t" | sort -k11,11nr > $DATA/genetablefilter.txt
+cat <(awk '{gene[$5]+=$10} END {for (i in gene) print i,gene[i]}' $DATA/nointsnodom.txt) <(awk '{gene[$5]+=$10} END {for (i in gene) print i,gene[i]}' $DATA/nointsuniq.txt) | tr -s " " "\t" | sort -k1,1 | bedtools groupby -g 1 -c 2 -o sum > $DATA/nointlen
+awk '{gene[$5]+=$10} END {for (i in gene) print i,gene[i]}' $DATA/nointsuniq.txt | sort > $DATA/nointlenuniq
 
-gawk 'function median(v) {c=asort(v,k); if (c % 2) return k[(c+1)/2]; else return (k[c/2+1]+k[c/2])/2.0} {{if ($15=="ds") {sct[$12]++; ct[$12]++} else if ($15=="dn") nct[$12]++; ct[$12]++} auto[$7]=$7; len[$12 $7]=$11; maf[$12][$1 $2 $3 $15]=$13; row[$12]=$12}
-END {
-        for (l in row) {
-                for (j in auto) {
-                        leng[l]+=len[l j]
-                }
-        }
-}
-END {
-        for (i in row) {
-                print row[i],leng[i],(nct[i]==0 ? nct[i]=0: nct[i]),(sct[i]==0 ? sct[i]=0: sct[i]),(nct[i]+sct[i]),nct[i]/(sct[i]==0 ? sct[i]+1: sct[i]),(nct[i]+sct[i])/(leng[i]==0? leng[i]+1: leng[i]),median(maf[i])
-        }
-}' <(grep -v NoDom $DATA/allint2uniqfilter.bed) | tr -s " " "\t" | sort -k11,11nr > $DATA/uniqgenetablefilter.txt
+python genetable.py $DATA/allint2uniqfilter.bed | sort -k1,1 > $DATA/gene
+awk 'NR==FNR{a[$1]=$2} NR!=FNR{{if ($1 in a) $2=$2+a[$1]} {print}}' $DATA/nointlen $DATA/gene > $DATA/genetablefilter.txt
+
+python genetable.py <(grep -v NoDom $DATA/allint2uniqfilter.bed) | sort -k1,1 > $DATA/uniqgene
+awk 'NR==FNR{a[$1]=$2} NR!=FNR{{if ($1 in a) $2=$2+a[$1]} {print}}' $DATA/nointlenuniq $DATA/gene > $DATA/uniqgenetablefilter.txt
+
+# make MAF spanning file
+cat <(gawk 'NR==FNR{a[$5 $6][$1 $2 $3]=$1 " " $2 " " $3 " " $4; cov[$5 $6][$1 $2 $3]=$7} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0,cov[$3 $2][i]}}' <(cut -f 1,2,3,15,25,33,48 $DATA/alluniq.bed) <(cut -d " " -f 1,2,3,7,8,9,11 $DATA/uniqtablefilter.txt) | tr -s " " "\t" | sort -k1,1 -k2,2n) \
+<(gawk 'NR==FNR{a[$5 $6][$1 $2 $3]=$1 " " $2 " " $3 " " $4; cov[$5 $6][$1 $2 $3]=$7} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0,cov[$3 $2][i]}}' <(cut -f 1,2,3,8,12,24,27 $DATA/nodom.bed | awk '{t=$6; $6=$5; $5=t; print}' OFS='\t') <(cut -d " " -f 1,2,3,7,8,9,11 $DATA/nodomtablefilter.txt)) \
+| tr -s " " "\t" | sort -k1,1 -k2,2n > $DATA/regioncoordsdnds.bed
+cat <(bedtools intersect -a $DATA/regioncoordsdnds.bed -b $DATA/allint2uniqfilter.bed -wa -wb -sorted | awk '{if ($6==$24) print}' | cut -f -12,25,26,27) <(bedtools intersect -a $DATA/regioncoordsdnds.bed -b $DATA/allint2uniqfilter.bed -v -sorted | awk '{print $0"\t.\t.\t."}') \
+| bedtools groupby -g 1,2,3,4,5,6,7,8,9,10,11,12 -c 13,14,15 -o collapse,collapse,collapse | sort -k1,1 -k6,6 -k5,5 -k7,7 \
+| bedtools groupby -i - -g 1,6,5,7 -c 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,2,3 -o distinct,min,max,distinct,distinct,distinct,distinct,distinct,distinct,distinct,distinct,collapse,collapse,collapse,collapse,collapse,collapse | cut -f 5-21 \
+| python recompute.py | cat <(printf "#chr\tstart\tend\ttranscript\tdomain\tgene\tautoregs(uniqid for non-domain regions)\tlength\tdn\tds\tdn/ds\tcov_ratio\tdensity\tfvrv\tmafs\timpacts\ttype\tstarts\tends\tmaf_modifier\n") - | bgzip > $DATA/regionsmafsdnds.bed.gz #also adds noint regions
+
+#get 1000 genomes data and get clinvar data
+
+wget -P $DATA ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/clinical_vcf_set/clinvar.vcf.gz
+
+for chrom in {1..22} X Y ; do wget -P $DATA ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/functional_annotation/unfiltered/ALL.chr$chrom.phase3_shapeit2_mvncall_integrated_v5_func_anno.20130502.sites.vcf.gz; done
+
+for chrom in {1..22} X ; do grep -v "^#" <(zcat $DATA/ALL.chr$chrom.phase3_shapeit2_mvncall_integrated_v5_func_anno.20130502.sites.vcf.gz) >> $DATA/1000genomes.vcf; done
+grep -v "^#" <(zcat $DATA/ALL.chrY.phase3_integrated_func_anno.20130502.sites.vcf.gz) >> $DATA/1000genomes.vcf
+cat <(grep "^#" <(zcat $DATA/ALL.chr1.phase3_shapeit2_mvncall_integrated_v5_func_anno.20130502.sites.vcf.gz)) <(sort -k1,1 -k2,2n <(grep -v "^#" $DATA/1000genomes.vcf)) > $DATA/blah; mv $DATA/blah $DATA/1000genomes.vcf
+
+# filtering clinvar data and filtering 1000 genomes data
+
+python varcomp.py -c -f $DATA/clinvar.vcf.gz | cat <(grep "^#" <(zcat $DATA/clinvar.vcf.gz)) <(sort -k1,1 -k2,2n -) > $DATA/clinvardeleterious.vcf
+
+python varcomp.py -g -f $DATA/1000genomes.vcf $DATA/transcripts.txt | cat <(grep "^#" <(zcat $DATA/ALL.chr1.phase3_shapeit2_mvncall_integrated_v5_func_anno.20130502.sites.vcf.gz)) - > $DATA/1kgenomesfilter.vcf
+
+# getting histogram lists for 1000genomes and clinvar
+
+bedtools intersect -a <(awk 'NR==FNR{a[$7]=$0} NR!=FNR{if ($7 in a) print a[$7],$12,$13}' $DATA/regioncoordsdnds.bed <(zcat $DATA/regionsmafsdnds.bed.gz) | tr -s " " "\t" | sed '1d' | sort -k1,1 -k2,2n) -b $DATA/clinvardeleterious.vcf -wb -sorted | cut -f 1-16 > $DATA/clinvarhist.bed
+
+bedtools intersect -a <(awk 'NR==FNR{a[$7]=$0} NR!=FNR{if ($7 in a) print a[$7],$12,$13}' $DATA/regioncoordsdnds.bed <(zcat $DATA/regionsmafsdnds.bed.gz) | tr -s " " "\t" | sed '1d' | sort -k1,1 -k2,2n) -b $DATA/1kgenomesfilter.vcf -wb -sorted | cut -f 1-16 > $DATA/1khist.bed
 
 # divergence by domain table
 
@@ -181,13 +194,9 @@ bash limit.sh $DATA g 0.001
 
 # high dn/ds regions: 
 # test for hgtables repeats and generate dn/ds file with coords
-gawk 'NR==FNR{a[$5 $6][$1 $2 $3]=$1 " " $2 " " $3 " " $4} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0}}' <(cut -f 1,2,3,15,25,33 $DATA/alluniq.bed) <(cut -d " " -f 1,2,3,7,8,9,11 $DATA/uniqtablefilter.txt) | tr -s " " "\t" | sort -k1,1 -k2,2n > $DATA/regioncoordsdnds.bed
-gawk 'NR==FNR{a[$5 $6][$1 $2 $3]=$1 " " $2 " " $3 " " $4} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0}}' <(cut -f 1,2,3,8,12,24 $DATA/nodom.bed | awk '{t=$6; $6=$5; $5=t; print}' OFS='\t') <(cut -d " " -f 1,2,3,7,8,9,11 $DATA/nodomtablefilter.txt) | tr -s " " "\t" | sort -k1,1 -k2,2n >> $DATA/regioncoordsdnds.bed
-cat <(printf "chr\tstart\tend\ttranscript\tdomain\tgene\tautoregs(uniqid for non-domain regions)\tlength\tdn\tds\tdn/ds\n") <(sort -k1,1 -k2,2n $DATA/regioncoordsdnds.bed) > $DATA/blah; mv $DATA/blah $DATA/regioncoordsdnds.bed
 
 awk '{if ($9 >= 10) print $0}' $DATA/domaincoordsdnds.bed | wc -l # how many domain regions for each dn/ds?
 grep -v "_ND" $DATA/uniqtable.txt | awk '{if ($11 >= 10) print $0}' | wc -l # how many autoregs for each dn/ds?
-
 dir=($(ls $DATA/hg*))
 dir[6]=$DATA/LCR-hs37d5.bed
 for ((i=0; i<${#dir[@]}; i++)); do bedtools intersect -a $DATA/domaincoordsdnds.bed -b <(perl -pe 's/^chr(.*)$/$1/g' ${dir[$i]} | sort -k1,1 -k2,2n | bedtools merge) -wo -sorted | awk '{print $0,$3-$2}' OFS='\t' | sort -k4,4 -k5,5 -k6,6 | bedtools groupby -g 4,5,6,7,8,9,10 -c 14,15 -o sum,sum | awk '{print $0,$8/$9}' OFS='\t' > $SCRATCH/$(echo ${dir[$i]} | perl -pe 's/.*\/(.*)\..*/$1/g')'.txt'; done #perl -pe 's/^chr(.*)$/$1/g' (clips off the chr part) other perl script pastes file name into .txt
