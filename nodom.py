@@ -8,7 +8,7 @@ class RecordExon(object):
 		self.chr = fields[0]
 		self.start = fields[1]
 		self.end = fields[2]
-		self.info = " ".join(fields[6:24]).rstrip()
+		self.info = "\t".join(fields[6:24]).rstrip()
 		self.uniqid = fields[7].strip(";").strip("\"")+"_"+fields[23].rstrip().strip(";").strip("\"")+"_NoDom"
 		self.transid = fields[9].strip(";").strip("\"")
 
@@ -28,10 +28,12 @@ exons=f1.readline()
 uniqs=f2.readline()
 e_bed=''
 u_bed=''
+utrans=set()
 
 while exons and uniqs:
 	e=RecordExon(exons.split("\t"))
 	u=RecordUniq(uniqs.split("\t"))
+	utrans.add(u.transid)
 	old_e_trans=e.transid
 	old_u_trans=u.transid
 	if e.transid == u.transid:
@@ -62,7 +64,7 @@ while exons and uniqs:
 		ct=1
 		for i in bed.splitlines():
 			i=i.split()
-			chrom=i[0];start=i[1];end=i[2];info=" ".join(i[3:len(i)-1]);uniqid=i[len(i)-1]
+			chrom=i[0];start=i[1];end=i[2];info="\t".join(i[3:len(i)-1]);uniqid=i[len(i)-1]
 			if old_chrom!=None and old_uniq==uniqid and not (chrom==old_chrom and start==old_start and end==old_end):
 				ct=ct+1
 			else:
@@ -81,5 +83,45 @@ while exons and uniqs:
 	if not uniqs or not exons:
 		break
 
-f1.close()
 f2.close()
+
+f1.seek(0)
+exons=f1.readline()
+e_bed=''
+
+while exons:
+	e=RecordExon(exons.split("\t"))
+	old_e_trans=e.transid
+	if e.transid not in utrans:
+		while e.transid == old_e_trans:
+			e_bed=e_bed+e.chr+"\t"+e.start+"\t"+e.end+"\t"+e.info+"\t"+e.uniqid+"\n"
+			exons=f1.readline()
+			try:
+				e=RecordExon(exons.split("\t"))
+			except IndexError:
+				old_e_trans=None
+		bed=str(pybedtools.BedTool(e_bed,from_string=True).sort())
+		old_chrom=None
+		old_start=None
+		old_end=None
+		old_uniq=None
+		ct=1
+		for i in bed.splitlines():
+			i=i.split()
+			chrom=i[0];start=i[1];end=i[2];info="\t".join(i[3:len(i)-1]);uniqid=i[len(i)-1]
+			if old_chrom!=None and old_uniq==uniqid and not (chrom==old_chrom and start==old_start and end==old_end):
+				ct=ct+1
+			else:
+				ct=1
+			old_chrom=chrom
+			old_start=start
+			old_end=end
+			old_uniq=uniqid
+			sys.stdout.write("\t".join([chrom,start,end,str(int(end)-int(start)),info+" uniqid "+uniqid+str(ct)])+"\n")
+		e_bed=''
+	else:
+		exons=f1.readline()
+	if not exons:
+		break
+
+f1.close()

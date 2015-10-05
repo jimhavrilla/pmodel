@@ -15,7 +15,6 @@ class RecordUniq(object):
 		self.ct = fields[9]
 		self.dnds = fields[10]
 		self.density = fields[11]
-		self.mmaf = fields[12]
 
 class RecordNone(object):
 	def __init__(self, fields):

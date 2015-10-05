@@ -49,6 +49,12 @@ for line in sys.stdin:
 			ct[r_.autoreg+r_.gene][2]+=1
 	else:
 		ct[r_.autoreg+r_.gene]=[float(0),float(0),float(0),float(r_.len),"\t".join([r_.domain,r_.gene,r_.autoreg,r_.uniqid,r_.covcount,r_.covratio,r_.len])]
+		if "dn" in types:
+			ct[r_.autoreg+r_.gene][0]+=1
+		if "ds" in types:
+			ct[r_.autoreg+r_.gene][1]+=1
+		if "na" in types:
+			ct[r_.autoreg+r_.gene][2]+=1
 	if oldauto!=None and oldauto!=r_.autoreg:
 		if ct[oldauto+oldgene][1]==0:
 			dnds=str(int(ct[oldauto+oldgene][0]/1))
