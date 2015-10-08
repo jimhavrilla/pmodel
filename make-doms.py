@@ -45,7 +45,8 @@ for grp, records in groupby((Record1(line.rstrip().split()) for line in f1), gro
 
     bed = "\n".join(r.chr+"\t"+r.start+"\t"+r.end+"\t"+r.database+"\t"+r.seqtype+"\t"+r.field7+"\t"+r.strand+"\t"+r.field9+"\t"+r.info1+"\t"+r.transid+"\t"+r.info2+"\t"+r.autoreg+"\t"+r.info3+"\t"+r.exonid+"\t"+r.info4 for r in records)
 
-    bed = str(pybedtools.BedTool(bed, from_string=True))
+    bed = str(pybedtools.BedTool(bed, from_string=True)).merge(o=rangerep[0],
+            c=rangerep[1])
 
     for i in (x.split() for x in bed.splitlines()):
 
