@@ -216,9 +216,9 @@ fi
 
 # bill's gtfs:
 
-if [ ! -f "$DATA/all.bed" ]
+if [ ! -f "$DATA/pfam.bed" ]
 then
-    echo "CREATING $DATA/all.bed"
+    echo "CREATING $DATA/pfam.bed"
     for chrom in {1..22} X Y
     do
         wget -P $DATA http://fastademo.bioch.virginia.edu/pfam_dna/Homo_sapiens.chr$chrom.pfam.gtf
@@ -230,8 +230,8 @@ then
         | sort -k1,1 -k2,2n  \
         > $DATA/chr$chrom.bed
     done
-    cat $DATA/chr*.bed | sort -k1,1 -k2,2n > $DATA/all.bed
+    cat $DATA/chr*.bed | sort -k1,1 -k2,2n > $DATA/pfam.bed
     rm $DATA/chr*
 else
-    echo "FOUND $DATA/all.bed"
+    echo "FOUND $DATA/pfam.bed"
 fi
