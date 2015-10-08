@@ -169,7 +169,6 @@ then
     > $DATA/nodoms-any-coverage.bed
 
     rm $DATA/foo2 
-
     bedtools intersect \
         -wa -wb -sorted \
         -a <(sort -k1,1 -k2,2n $DATA/nodoms-any-coverage.bed) \
