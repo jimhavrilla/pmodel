@@ -1,5 +1,5 @@
-DATA=$1
-
+#!/bin/bash
+set -e
 
 check(){
 	obs=$1
@@ -12,13 +12,127 @@ else
 fi
 }
 
-echo "pmodel.t1... test that number of uniq genes before filtering on maximum length is equal to the number in transcripts.txt"
-exp=$(cut -f 2 $DATA/appris_data.principal.txt | sort -u | wc -l | cut -d " " -f 1)
-obs=$(wc -l < $DATA/transcripts.txt)
+usage()
+{
+    cat << EOF
+
+usage: $0 OPTIONS
+
+OPTIONS can be:
+    -d      Data directory
+
+EOF
+}
+
+# Show usage when there are no arguments.
+if test -z "$1"
+then
+    usage
+    exit
+fi
+
+DATA=
+
+# Check options passed in.
+while getopts "h d:" OPTION
+do
+    case $OPTION in
+        h)
+            usage
+            exit 1
+            ;;
+        d)
+            DATA=$OPTARG
+            ;;
+        ?)
+            usage
+            exit
+            ;;
+    esac
+done
+
+if [ -z "$DATA" ]
+then
+    echo "Data directory not set"
+    usage
+    exit
+fi
+
+if [ ! -d "$DATA" ]
+then
+    echo "Data directory does not exist"
+    usage
+    exit
+fi
+
+##############################################################################
+echo "pmodel.t0... test that the number of transcripts in the exons file matches the number of transcripts after utr removal" 
+
+if [ ! -f "$DATA/exons.bed" ]
+then
+    echo "COULD NOT FIND $DATA/exons.bed"
+    exit
+fi
+
+if [ ! -f "$DATA/exons_sans_utrs.bed" ]
+then
+    echo "COULD NOT FIND $DATA/exons_sans_utrs.bed"
+    exit
+fi
+
+exp=`cat $DATA/exons.bed \
+    | grep -v "^#" \
+    | grep transcript_id \
+    | cut -f 7 \
+    | cut -d ";" -f2 \
+    | uniq \
+    | sort -u \
+    | wc -l`
+
+obs=`cat $DATA/exons_sans_utrs.bed \
+    | grep -v "^#" \
+    | grep transcript_id \
+    | cut -f 7 \
+    | cut -d ";" -f2 \
+    | uniq \
+    | sort -u \
+    | wc -l`
 check $obs $exp
 
 
+##############################################################################
+echo "pmodel.t1... test that number of uniq genes before filtering on maximum length is equal to the number in transcripts.txt"
+
+if [ ! -f "$DATA/appris_data.principal.txt" ]
+then
+    echo "COULD NOT FIND $DATA/appris_data.principal.txt"
+    exit
+fi
+
+if [ ! -f "$DATA/transcripts.txt" ]
+then
+    echo "COULD NOT FIND $DATA/transcripts.txt"
+    exit
+fi
+
+exp=$(cut -f 2 $DATA/appris_data.principal.txt | sort -u | wc -l | awk '{print $1;}')
+obs=$(wc -l < $DATA/transcripts.txt)
+check $obs $exp
+
+##############################################################################
 echo "pmodel.t2... test that the nodoms don't intersect the doms"
+
+if [ ! -f "$DATA/doms-any-coverage.bed" ]
+then
+    echo "COULD NOT FIND $DATA/doms-any-coverage.bed"
+    exit
+fi
+
+if [ ! -f "$DATA/nodoms-any-coverage.bed" ]
+then
+    echo "COULD NOT FIND $DATA/nodoms-any-coverage.bed"
+    exit
+fi
 
 obs=$(bedtools intersect -a $DATA/doms-any-coverage.bed -b $DATA/nodoms-any-coverage.bed -wo \
 	| python test-different-transcripts.py)
@@ -26,13 +140,59 @@ exp=""
 check $obs $exp
 
 
+##############################################################################
 echo "pmodel.t3... test that exons-(doms+nodoms) gives empty results"
+
+if [ ! -f "$DATA/doms-any-coverage.bed" ]
+then
+    echo "COULD NOT FIND $DATA/doms-any-coverage.bed"
+    exit
+fi
+
+if [ ! -f "$DATA/nodoms-any-coverage.bed" ]
+then
+    echo "COULD NOT FIND $DATA/nodoms-any-coverage.bed"
+    exit
+fi
+
+if [ ! -f "$DATA/exons_sans_utrs.bed" ]
+then
+    echo "COULD NOT FIND $DATA/exons_sans_utrs.bed"
+    exit
+fi
+
+if [ ! -f "$DATA/transcripts.txt" ]
+then
+    echo "COULD NOT FIND $DATA/transcripts.txt"
+    exit
+fi
 
 obs=$(bedtools subtract -a <(cat $DATA/doms-any-coverage.bed $DATA/nodoms-any-coverage.bed|cut -f 1-22) -b $DATA/exons_sans_utrs.bed)
 exp=""
 check $obs $exp
 
+##############################################################################
+
 echo "pmodel.t4... test that (doms+nodoms)-exons gives empty results"
-obs=$(bedtools subtract -b <(cat $DATA/doms-any-coverage.bed $DATA/nodoms-any-coverage.bed | cut -f 1-22) -a <(cut -f 2 $DATA/transcripts.txt | grep -wFf - $DATA/exons_sans_utrs.bed))
+
+if [ ! -f "$DATA/doms-any-coverage.bed" ]
+then
+    echo "COULD NOT FIND $DATA/doms-any-coverage.bed"
+    exit
+fi
+
+if [ ! -f "$DATA/nodoms-any-coverage.bed" ]
+then
+    echo "COULD NOT FIND $DATA/doms-any-coverage.bed"
+    exit
+fi
+
+if [ ! -f "$DATA/exons_sans_utrs.bed" ]
+then
+    echo "COULD NOT FIND $DATA/exons_sans_utrs.bed"
+    exit
+fi
+cut -f 2 $DATA/transcripts.txt > $DATA/foo8738
+obs=$(bedtools subtract -b <(cat $DATA/doms-any-coverage.bed $DATA/nodoms-any-coverage.bed | cut -f 1-22) -a <(grep -wF -f $DATA/foo8738 $DATA/exons_sans_utrs.bed))
 exp=""
 check $obs $exp
