@@ -25,35 +25,32 @@ class Record1(object):
 		self.geneid = fields[26]
 		self.gene = fields[32]
 		self.exonid = fields[42]
-		
+
 f1=open(sys.argv[1],"r")
 bed=''
 old_r=None
 olduniq=None
 ct=1
 rangerep=[['distinct']*len(range(4,44)),range(4,44)]
-for line in f1:
-	fields=line.rstrip().split()
-	r_=Record1(fields)
-	#if r_.transid == r_.transid2:
-	if old_r != None and (r_.autoreg != old_r.autoreg or r_.transid!=old_r.transid): # check why ensl ids are different and why transcript pfam != transcript ensl
-		bed=str(pybedtools.BedTool(bed.rstrip('\n'),from_string=True).merge(o=rangerep[0],c=rangerep[1]))  # in the future, just in case add merging on all fields
-		for i in bed.splitlines():
-			i=i.split()
-			domain=i[9];transid=i[13];autoreg=i[23];geneid=i[25];exonid=i[41]
-			uniqid=geneid+"_"+transid+"_"+exonid+"_"+autoreg+"_"+domain
-			sys.stdout.write("\t".join(i[0:3])+"\t"+str(int(i[2])-int(i[1]))+"\t"+"\t".join(i[3:43])+"\t"+uniqid+"\n")
-		bed=''
-	bed=bed+r_.chr+"\t"+r_.start+"\t"+r_.end+"\t"+r_.database+"\t"+r_.seqtype+"\t"+r_.field7+"\t"+r_.strand+"\t"+r_.field9+"\t"+r_.info1+"\t"+r_.transid+"\t"+r_.info2+"\t"+r_.autoreg+"\t"+r_.info3+"\t"+r_.exonid+"\t"+r_.info4+"\n" # in the future, just in case add merging on all fields
-	old_r=r_
 
+def grouper(o):
+    return o.autoreg, o.transid
 
-bed=str(pybedtools.BedTool(bed.rstrip('\n'),from_string=True).merge(o=rangerep[0],c=rangerep[1])) # in the future, just in case add merging on all fields
-for i in bed.splitlines():
-	i=i.split()
-	domain=i[9];transid=i[13];autoreg=i[23];geneid=i[25];exonid=i[41]
-	uniqid=geneid+"_"+transid+"_"+exonid+"_"+autoreg+"_"+domain
-	sys.stdout.write("\t".join(i[0:3])+"\t"+str(int(i[2])-int(i[1]))+"\t"+"\t".join(i[3:43])+"\t"+uniqid+"\n")
+grouper = lambda o: (o.autoreg, o.transid)
 
+from itertools import groupby
+
+for grp, records in groupby((Record1(line.rstrip().split()) for line in f1), grouper):
+    records = list(records)
+
+    bed = "\n".join(r.chr+"\t"+r.start+"\t"+r.end+"\t"+r.database+"\t"+r.seqtype+"\t"+r.field7+"\t"+r.strand+"\t"+r.field9+"\t"+r.info1+"\t"+r.transid+"\t"+r.info2+"\t"+r.autoreg+"\t"+r.info3+"\t"+r.exonid+"\t"+r.info4 for r in records)
+
+    bed = str(pybedtools.BedTool(bed, from_string=True))
+
+    for i in (x.split() for x in bed.splitlines()):
+
+         domain=i[9];transid=i[13];autoreg=i[23];geneid=i[25];exonid=i[41]
+         uniqid=geneid+"_"+transid+"_"+exonid+"_"+autoreg+"_"+domain
+         sys.stdout.write("\t".join(i[0:3])+"\t"+str(int(i[2])-int(i[1]))+"\t"+"\t".join(i[3:43])+"\t"+uniqid+"\n")
 
 f1.close();
