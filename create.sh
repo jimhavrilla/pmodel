@@ -16,7 +16,7 @@ awk 'NR==FNR{a[$2]}$29 in a{print $0}' $DATA/transcripts.txt $DATA/foo.bed | tr 
 
 # domain coverage and rearranging: // based on histograms, used 5x as a filter
 
-python rearrange2.py <(awk '{if ($15==$29) print}' $DATA/foo.bed | tr -s " " "\t" | cut -f -45) | sort -k1,1 -k2,2n > $DATA/bar
+python make-doms.py <(awk '{if ($15==$29) print}' $DATA/foo.bed | tr -s " " "\t" | cut -f -45) | sort -k1,1 -k2,2n > $DATA/bar
 
 #CMD="cat $DATA/bar | tr -s "\t" " " | cut -d " " -f 1-45 | tr -s " " "\t") -b <(awk '{if ($4>="$COV") print}' $DATA/coverage.bed"
 
