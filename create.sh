@@ -25,7 +25,7 @@ bedtools intersect -a <(cat $DATA/bar | tr -s "\t" " " | cut -d " " -f 1-45 | tr
 | tr -s " " "\t" | cut -f 1-45,50- > $DATA/alluniq.bed
 
 # nodoms
-perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/GRCh37.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | perl -pe 's/"|;//g' | awk 'NR==FNR{a[$2]}$10 in a{print}' $DATA/transcripts.txt - | tr -s " " "\t" | sort -k10,10 > $DATA/foo2
+perl -pe 's/tag\s*\S*?(?=\n|\s)//g' $DATA/exons_sans_utrs.bed | perl -pe 's/ccds_id\s*\S*?(?=\n|\s)//g' | perl -pe 's/"|;//g' | awk 'NR==FNR{a[$2]}$10 in a{print}' $DATA/transcripts.txt - | tr -s " " "\t" | sort -k10,10 > $DATA/foo2
 awk '{split($15,trans,","); for (i in trans) print $1,$2,$3,$13,$25,trans[i],$43}' $DATA/alluniq.bed | sort -k6,6 | tr -s " " "\t"  > $DATA/foo3
 python nodom.py $DATA/foo2 $DATA/foo3 > $DATA/foo; rm $DATA/foo2 $DATA/foo3
 
