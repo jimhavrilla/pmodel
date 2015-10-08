@@ -15,7 +15,7 @@ usage: $0 $DATA, $SOFTWARE opts
 				2 means redownload, but don't vep annotate
 		-c	generate domain and nodom files
 				value input is the coverage mean chosen,
-				default	is 5, two arguments, domain and nodom
+				default	is 5, for both domain and nodom
 		-i	run intersection:
 		-t	make tables:
 				value input is the maf cutoff chosen,
@@ -33,7 +33,7 @@ then
 	exit
 fi
 
-while getopts "hg:c:it:l:" OPTION
+while getopts "hg:cc:it:l:" OPTION
 do
 	case $OPTION in
 	h)
@@ -44,8 +44,11 @@ do
 		bash getfiles.sh $OPTARG
 		;;
 	c)
-		array=(${OPTARG//,/ })
-		bash create.sh ${array[0]} ${array[1]}
+		if [ !$OPTARG ];
+		then
+			OPTARG=5
+		fi
+	#	bash create.sh $OPTARG
 		;;
 	i)
 		bash intersect.sh

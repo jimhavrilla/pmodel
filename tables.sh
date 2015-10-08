@@ -1,5 +1,7 @@
 #tables.sh - make regions tables, and soon, gene tables
 
+MAF=$1
+
 # sort domain occurrence count from bill, remove weird carriage return characters that screw things up
 
 sort -k2,2 $DATA/human_pfam.counts | perl -pe 's/\r$//g'  > $DATA/blah; mv $DATA/blah $DATA/human_pfam.counts
@@ -32,3 +34,5 @@ cat <(bedtools intersect -a $DATA/regioncoordsdnds.bed -b $DATA/allintfilter.bed
 | bedtools groupby -g 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 -c 17,18,19 -o collapse,collapse,collapse | sort -k1,1 -k6,6 -k5,5 -k7,7 \
 | bedtools groupby -i - -g 1,6,5,7 -c 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,2,3 -o distinct,min,max,distinct,distinct,distinct,distinct,distinct,distinct,distinct,distinct,distinct,distinct,distinct,distinct,distinct,collapse,collapse,collapse,collapse,collapse | cut -f 5-26 \
 | python recompute.py | cat <(printf "#chr\tstart\tend\ttranscript\tdomain\tgene\tautoregs(uniqid for non-domain regions)\tcov_ratio\tlength\tdn\tds\tna\tdn/ds\tdensity\tfvrv\tprevalence\tmafs\timpacts\ttype\tstarts\tends\tmaf_modifier\n") - | bgzip > $DATA/regionsmafsdnds.bed.gz 
+
+python mafcalc.py -f $DATA/regionsmafsdnds.bed.gz -m $MAF > $DATA/regions.$MAF.bed # only greater than at the moment...
