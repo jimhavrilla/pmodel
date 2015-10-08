@@ -39,12 +39,11 @@ if options.bool==True:
 			self.end = fields[2]
 			self.gene = fields[3]
 			self.uniqid = fields[4] 
-			self.covct = fields[5]
-			self.covratio = fields[6]
-			self.len = fields[7]
-			self.ref = fields[8]
-			self.alt = fields[9]
-			self.info = fields[10]
+			self.covratio = fields[5]
+			self.len = fields[6]
+			self.ref = fields[7]
+			self.alt = fields[8]
+			self.info = fields[9]
 
 	for line in sys.stdin:
 		fields=line.rstrip().split("\t")
@@ -77,7 +76,7 @@ if options.bool==True:
 			types=judge_impact(impacts)
 			csq1="\t".join([split_fields(csqstring[j],i) for i in range(0,4)])
 			csq2="\t".join([split_fields(csqstring[j],i) for i in range(4,9)])
-			print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,".",r_.uniqid,r_.uniqid,r_.covct,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
+			print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,".",r_.uniqid,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
 
 if options.bool==False:
 	class Record(object):
@@ -89,12 +88,11 @@ if options.bool==False:
 			self.gene = fields[4]
 			self.autoreg = fields[5]
 			self.uniqid = fields[6]
-			self.covct = fields[7]
-			self.covratio = fields[8]
-			self.len = fields[9]
-			self.ref = fields[10]
-			self.alt = fields[11]
-			self.info = fields[12]
+			self.covratio = fields[7]
+			self.len = fields[8]
+			self.ref = fields[9]
+			self.alt = fields[10]
+			self.info = fields[11]
 
 	for line in sys.stdin:
 		fields=line.rstrip().split("\t")
@@ -127,4 +125,4 @@ if options.bool==False:
 			types=judge_impact(impacts)
 			csq1="\t".join([split_fields(csqstring[j],i) for i in range(0,4)])
 			csq2="\t".join([split_fields(csqstring[j],i) for i in range(4,9)])
-			print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,r_.domain,r_.autoreg,r_.uniqid,r_.covct,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
+			print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,r_.domain,r_.autoreg,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])

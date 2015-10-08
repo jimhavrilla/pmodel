@@ -22,18 +22,21 @@ class Record(object):
 		self.domain = fields[4]
 		self.gene = fields[5]
 		self.autoreg = fields[6]
-		self.length = fields[7]
-		self.dn = fields[8]
-		self.ds = fields[9]
-		self.dnds = fields[10]
-		self.density = fields[11]
-		self.fvrv = fields[12]
-		self.mafs = fields[13]
-		self.impacts = fields[14]
-		self.types = fields[15]
-		self.starts = fields[16]
-		self.ends = fields[17]
-		self.mod = fields[18]
+		self.covratio = fields[7]
+		self.length = fields[8]
+		self.dn = fields[9]
+		self.ds = fields[10]
+		self.na = fields[11]
+		self.dnds = fields[12]
+		self.density = fields[13]
+		self.fvrv = fields[14]
+		self.prevalence = fields[15]
+		self.mafs = fields[16]
+		self.impacts = fields[17]
+		self.types = fields[18]
+		self.starts = fields[19]
+		self.ends = fields[20]
+		self.mod = fields[21]
 
 with open(args.files[0],"r") as f:
 	bed = reader(f,delimiter="\t")
@@ -41,22 +44,21 @@ with open(args.files[0],"r") as f:
 	for record in bed:
 		r_=Record(record)
 		try:
-			mafs=np.array([float(x) for x in r_.mafs.split(",")])
+			mafs=np.array([y for x in r_.mafs.split(",") for y in x.split("|")],dtype=float)
 		except ValueError:
 			sys.stdout.write("\t".join([r_.chr,r_.start,r_.end,r_.transid,r_.domain,r_.gene,r_.autoreg,r_.length,str(r_.dn),str(r_.ds),r_.dnds,r_.density,r_.fvrv,r_.mafs,r_.impacts,r_.types,r_.starts,r_.ends,r_.mod])+"\n")
 			continue
-		types=np.array(r_.types.split(","))
-		impacts=np.array(r_.impacts.split(","))
-		r_.impacts=impacts[np.where(mafs>args.maf)[0]]
-		r_.types=types[np.where(mafs>args.maf)[0]]
-		r_.mafs=mafs[np.where(mafs>args.maf)[0]]
-		r_.dn=float(len(r_.types[np.where(r_.types=='dn')[0]]))
-		r_.ds=float(len(r_.types[np.where(r_.types=='ds')[0]]))
+		types=np.array([y for x in r_.types.split(",") for y in x.split("|")],dtype=str)
+		impacts=np.array([y for x in r_.impacts.split(",") for y in x.split("|")],dtype=str)
+		impacts=impacts[np.where(mafs>args.maf)[0]]
+		types=types[np.where(mafs>args.maf)[0]]
+		mafs=mafs[np.where(mafs>args.maf)[0]]
+		r_.dn=float(len(types[np.where(types=='dn')[0]]))
+		r_.ds=float(len(types[np.where(types=='ds')[0]]))
 		if r_.ds!=0:
 			r_.dnds=str(r_.dn/r_.ds)
 		else:
 			r_.dnds=str(r_.dn/1)
-		r_.density=str(float(len(r_.types))/float(r_.length))
+		r_.density=str(float(len(types))/float(r_.length))
 		r_.mod=str(args.maf)
-		r_.mafs=[str(i) for i in r_.mafs]
-		sys.stdout.write("\t".join([r_.chr,r_.start,r_.end,r_.transid,r_.domain,r_.gene,r_.autoreg,r_.length,str(r_.dn),str(r_.ds),r_.dnds,r_.density,r_.fvrv,",".join(r_.mafs),",".join(r_.impacts),",".join(r_.types),r_.starts,r_.ends,r_.mod])+"\n")
+		sys.stdout.write("\t".join([r_.chr,r_.start,r_.end,r_.transid,r_.domain,r_.gene,r_.autoreg,r_.length,str(r_.dn),str(r_.ds),r_.dnds,r_.density,r_.fvrv,r_.mafs,r_.impacts,r_.types,r_.starts,r_.ends,r_.mod])+"\n")

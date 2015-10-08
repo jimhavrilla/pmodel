@@ -54,8 +54,6 @@ while exons and uniqs:
 		a=pybedtools.BedTool(e_bed,from_string=True)
 		b=pybedtools.BedTool(u_bed,from_string=True)
 		bed=str(a.subtract(b))
-		bed2=str(a.intersect(b,v=True))
-		bed=bed+"\n"+bed2
 		bed=str(pybedtools.BedTool(bed,from_string=True).sort())
 		old_chrom=None
 		old_start=None
