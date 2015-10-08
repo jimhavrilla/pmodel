@@ -1,4 +1,5 @@
 #create.sh - generate nodoms and domains, also make filtered transcript file
+set -e
 
 COV=$1 # coverage factor to filter on
 
