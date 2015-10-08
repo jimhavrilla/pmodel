@@ -1,7 +1,12 @@
 #!/bin/bash
 
-DATA=$1
-SOFTWARE=$2
+#perl: 5.22
+#bedtools: 2.25
+#pybedtools: 0.7.1
+#python: 2.7.10
+
+export DATA=$1
+export SOFTWARE=$2
 
 function usage () {
 	cat << EOF
