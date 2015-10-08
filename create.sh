@@ -8,7 +8,7 @@ bedtools intersect -a $DATA/all.bed -b $DATA/GRCh37.bed -wb | awk {'print $1,$2,
 
 # get number one appris transcripts by length or randomness
 
-python seltrans.py <(sort -k2,2 -k3,3 $DATA/appris_data.principal.txt | grep -v ALTERNATIVE) <(sed '1d' $DATA/transcriptlengths.txt | sort -k1,1 -k2,2) > $DATA/transcripts.txt
+python select-transcript.py <(grep -v ALTERNATIVE $DATA/appris_data.principal.txt) <(sed '1d' $DATA/transcriptlengths.txt) > $DATA/transcripts.txt
 
 # use appris to remove non-canonical transcripts; sort by ENSL gene_id and Pfam autoreg to merge uniqids into single domain
 
