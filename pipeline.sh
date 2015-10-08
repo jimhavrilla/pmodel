@@ -48,7 +48,7 @@ do
 		then
 			OPTARG=5
 		fi
-	#	bash create.sh $OPTARG
+		bash create.sh $OPTARG
 		;;
 	i)
 		bash intersect.sh

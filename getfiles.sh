@@ -2,7 +2,7 @@
 
 # bill's domain count file:
 
-mysql -N --raw -h wrpxdb.its.virginia.edu -u web_user -pfasta_www pfam27 < count_human_pfam.sql > human_pfam.counts
+mysql -N --raw -h wrpxdb.its.virginia.edu -u web_user -pfasta_www pfam27 < count_human_pfam.sql > $DATA/human_pfam.counts
 
 # for vcf:
 
