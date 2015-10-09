@@ -73,7 +73,6 @@ if options.bool==True:
 				var[trans]={allele:impact}
 				csqstring[trans]={allele:cs}
 		for j in var:
-			print r_.transid,j
 			if r_.transid == j:
 				impacts="|".join(var[j].values())
 				types=judge_impact(impacts)
