@@ -41,4 +41,4 @@ Here, a region-based table is generated with variant density, domain prevalence 
 
 This part of the pipeline is totally optional, but it is good for illustrating how a protein's variation looks visually with height of lollipops determing the rarity of a variant and the color determining the type - they are placed by AA coordinates.
 
----END OF README
+>>>END OF README
