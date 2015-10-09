@@ -12,8 +12,8 @@ sed '1d' $DATA/allintfilter.bed | python table.py > $DATA/regionstable.txt
 
 #finds non-intersecting regions
 
-cat <(bedtools intersect -a <(awk '{$13=$33; print $0}' OFS="\t" $DATA/alluniq.bed | cut -f 1,2,3,11,13,25,27,43,45,47,48 | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -v -sorted | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18) \
-<(bedtools intersect -a <(cut -f 1,2,3,12,24,26,27 $DATA/nodom.bed | awk '{t=$8;$8=$7;$7=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -v -sorted | cut -f 1,2,3,4,5,6,7,8,12,13,16 | awk '{print $1,$2,$3,".",$4,$5,$5,$6,$7,$8}') > $DATA/nointregions.txt
+cat <(bedtools intersect -a <(awk '{$13=$33; print $0}' OFS="\t" $DATA/doms.bed | cut -f 1,2,3,11,13,25,27,43,45,47,48 | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -v -sorted | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18) \
+<(bedtools intersect -a <(cut -f 1,2,3,12,24,26,27 $DATA/nodoms.bed | awk '{t=$8;$8=$7;$7=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -v -sorted | cut -f 1,2,3,4,5,6,7,8,12,13,16 | awk '{print $1,$2,$3,".",$4,$5,$5,$6,$7,$8}') > $DATA/nointregions.txt
 
 # adds noint regions and pfam occurrences to file
 
@@ -22,8 +22,8 @@ awk 'NR==FNR{a[$2]=$3} NR!=FNR{if ($1 in a) print $0"\t"a[$1]; else print $0"\t"
 
 # make MAF spanning file
 
-cat <(gawk 'NR==FNR{a[$5 $6][$1 $2 $3]=$1 " " $2 " " $3 " " $4} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0}}' <(cut -f 1,2,3,15,25,33,48 $DATA/alluniq.bed) <(cut -d " " -f 1,2,3,7,8,9,10,11 $DATA/regionstable.txt)) \
-<(gawk 'NR==FNR{a[$5 $6][$1 $2 $3]=$1 " " $2 " " $3 " " $4} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0}}' <(cut -f 1,2,3,8,12,24,27 $DATA/nodom.bed | awk '{t=$6; $6=$5; $5=t; print}' OFS='\t') <(cut -d " " -f 1,2,3,7,8,9,10,11 $DATA/regionstable.txt)) \
+cat <(gawk 'NR==FNR{a[$5 $6][$1 $2 $3]=$1 " " $2 " " $3 " " $4} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0}}' <(cut -f 1,2,3,15,25,33,48 $DATA/doms.bed) <(cut -d " " -f 1,2,3,7,8,9,10,11 $DATA/regionstable.txt)) \
+<(gawk 'NR==FNR{a[$5 $6][$1 $2 $3]=$1 " " $2 " " $3 " " $4} NR!=FNR{if ($3 $2 in a) {for (i in a[$3 $2]) print a[$3 $2][i],$0}}' <(cut -f 1,2,3,8,12,24,27 $DATA/nodoms.bed | awk '{t=$6; $6=$5; $5=t; print}' OFS='\t') <(cut -d " " -f 1,2,3,7,8,9,10,11 $DATA/regionstable.txt)) \
 | tr -s " " "\t" | sort -k1,1 -k2,2n > $DATA/regioncoordsdnds.bed
 
 sort -k1,1 -k2,2n $DATA/allintfilter.bed > $DATA/blah; mv $DATA/blah $DATA/allintfilter.bed
