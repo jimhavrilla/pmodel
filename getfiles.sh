@@ -152,35 +152,9 @@ fi
 if [ ! -f "$DATA/exons_sans_utrs.bed" ]
 then
     echo "CREATING $DATA/exons_sans_utrs.bed" 
-    python filterutrs.py $DATA/exons.bed $DATA/utrs.bed > $DATA/exons_sans_utrs.bed
+    python filterutrs.py $DATA/exons.bed $DATA/utrs.bed \
+        > $DATA/exons_sans_utrs.bed
 
-    echo "VALIDATING $DATA/exons_sans_utrs.bed"
-
-    A=`cat $DATA/exons_sans_utrs.bed \
-        | grep -v "^#" \
-        | grep transcript_id \
-        | cut -f 7 \
-        | cut -d ";" -f2 \
-        | uniq \
-        | sort -u \
-        | wc -l`
-
-    B=`cat $DATA/exons.bed \
-        | grep -v "^#" \
-        | grep transcript_id \
-        | cut -f 7 \
-        | cut -d ";" -f2 \
-        | uniq \
-        | sort -u \
-        | wc -l`
-
-    if [ "$A" -ne "$B" ]
-    then
-        echo "Mismatch between transcripts in $DATA/exons.bed ($A) and $DATA/exons_sans_utrs.bed ($B)"
-        exit
-    else
-        echo "Transcripts match between in $DATA/exons.bed ($A) and $DATA/exons_sans_utrs.bed ($B)"
-    fi
 else
     echo "FOUND $DATA/exons_sans_utrs.bed" 
 fi
