@@ -10,8 +10,8 @@ cat <(zgrep "^#" $DATA/VEPEXAC3.vcf.gz) <(zgrep -v "^#" $DATA/VEPEXAC3.vcf.gz \
 
 #intersect
 
-bedtools intersect -a <(cut -f 1,2,3,11,15,25,27,33,43,45,47,48 $DATA/doms.bed | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -sorted -wb | cut -f 1,2,3,4,5,6,7,8,9,13,14,17 | python var.py -d > $DATA/domintfilter.bed
-bedtools intersect -a <(cut -f 1,2,3,8,12,24,26,27 $DATA/nodoms.bed | awk '{t=$7;$7=$6;$6=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -sorted -wb | cut -f 1,2,3,4,5,6,7,11,12,15 | python var.py -n > $DATA/nodomintfilter.bed
+bedtools intersect -a <(cut -f 1,2,3,11,15,25,27,33,43,45,47,48 $DATA/doms.bed | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -sorted -wb | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18 | python var.py -d > $DATA/domintfilter.bed
+bedtools intersect -a <(cut -f 1,2,3,8,12,24,26,27 $DATA/nodoms.bed | awk '{t=$7;$7=$6;$6=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -sorted -wb | cut -f 1,2,3,4,5,6,7,8,12,13,16 | python var.py -n > $DATA/nodomintfilter.bed
 
 # assign types to impacts
 
