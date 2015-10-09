@@ -37,13 +37,14 @@ if options.bool==True:
 			self.chr = fields[0]
 			self.start = fields[1]
 			self.end = fields[2]
-			self.gene = fields[3]
-			self.uniqid = fields[4] 
-			self.covratio = fields[5]
-			self.len = fields[6]
-			self.ref = fields[7]
-			self.alt = fields[8]
-			self.info = fields[9]
+			self.transid = fields[3]
+			self.gene = fields[4]
+			self.uniqid = fields[5] 
+			self.covratio = fields[6]
+			self.len = fields[7]
+			self.ref = fields[8]
+			self.alt = fields[9]
+			self.info = fields[10]
 
 	for line in sys.stdin:
 		fields=line.rstrip().split("\t")
@@ -72,11 +73,12 @@ if options.bool==True:
 				var[trans]={allele:impact}
 				csqstring[trans]={allele:cs}
 		for j in var:
-			impacts="|".join(var[j].values())
-			types=judge_impact(impacts)
-			csq1="\t".join([split_fields(csqstring[j],i) for i in range(0,4)])
-			csq2="\t".join([split_fields(csqstring[j],i) for i in range(4,9)])
-			print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,".",r_.uniqid,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
+			if r_.transid == j:
+				impacts="|".join(var[j].values())
+				types=judge_impact(impacts)
+				csq1="\t".join([split_fields(csqstring[j],i) for i in range(0,4)])
+				csq2="\t".join([split_fields(csqstring[j],i) for i in range(4,9)])
+				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,".",r_.uniqid,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
 
 if options.bool==False:
 	class Record(object):
@@ -85,14 +87,15 @@ if options.bool==False:
 			self.start = fields[1]
 			self.end = fields[2]
 			self.domain = fields[3]
-			self.gene = fields[4]
-			self.autoreg = fields[5]
-			self.uniqid = fields[6]
-			self.covratio = fields[7]
-			self.len = fields[8]
-			self.ref = fields[9]
-			self.alt = fields[10]
-			self.info = fields[11]
+			self.transid = fields[4]
+			self.gene = fields[5]
+			self.autoreg = fields[6]
+			self.uniqid = fields[7]
+			self.covratio = fields[8]
+			self.len = fields[9]
+			self.ref = fields[10]
+			self.alt = fields[11]
+			self.info = fields[12]
 
 	for line in sys.stdin:
 		fields=line.rstrip().split("\t")
@@ -121,8 +124,9 @@ if options.bool==False:
 				var[trans]={allele:impact}
 				csqstring[trans]={allele:cs}
 		for j in var:
-			impacts="|".join(var[j].values())
-			types=judge_impact(impacts)
-			csq1="\t".join([split_fields(csqstring[j],i) for i in range(0,4)])
-			csq2="\t".join([split_fields(csqstring[j],i) for i in range(4,9)])
-			print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,r_.domain,r_.autoreg,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
+			if r_.transid == j:
+				impacts="|".join(var[j].values())
+				types=judge_impact(impacts)
+				csq1="\t".join([split_fields(csqstring[j],i) for i in range(0,4)])
+				csq2="\t".join([split_fields(csqstring[j],i) for i in range(4,9)])
+				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,r_.domain,r_.autoreg,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
