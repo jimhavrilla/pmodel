@@ -30,5 +30,5 @@ for line in sys.stdin:
 		length[key]=int(r_.len)
 
 for y in row:
-	key=base64.encodestring(y[4]+y[5])
+	key=base64.encodestring(y[5]+y[6])
 	print "\t".join(y)+"\t"+str(length[key])
