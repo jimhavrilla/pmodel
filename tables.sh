@@ -11,9 +11,9 @@ sort -k2,2 $DATA/human_pfam.counts | perl -pe 's/\r$//g'  > $DATA/blah; mv $DATA
 sed '1d' $DATA/allintfilter.bed | python table.py > $DATA/regionstable.txt
 
 #finds non-intersecting regions
-
-cat <(bedtools intersect -a <(awk '{$13=$33; print $0}' OFS="\t" $DATA/doms.bed | cut -f 1,2,3,11,13,25,27,43,45,47,48 | python lencount.py | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -v -sorted | cut -f 1,2,3,4,5,6,7,8,9,10,14,15,18) \
-<(bedtools intersect -a <(cut -f 1,2,3,12,24,26,27 $DATA/nodoms.bed | awk '{t=$8;$8=$7;$7=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -v -sorted | cut -f 1,2,3,4,5,6,7,8,12,13,16 | awk '{print $1,$2,$3,".",$4,$5,$5,$6,$7,$8}') > $DATA/nointregions.txt
+ 
+cat <(bedtools intersect -a <(cut -f 1,2,3,11,15,25,27,33,43,45,47,48 $DATA/doms.bed | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -v -sorted | cut -f 1,2,3,4,6,8,10,11,12) \
+<(bedtools intersect -a <(cut -f 1,2,3,12,24,26,27 $DATA/nodoms.bed | awk '{t=$4;$4=$5;$5=t;print}' | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -v -sorted | cut -f 1,2,3,4,5,6,7,8,12,13,16 | awk '{print $1,$2,$3,".",$4,$5,$4,$6,$7,$8}') > $DATA/nointregions.txt
 
 # adds noint regions and pfam occurrences to file
 
