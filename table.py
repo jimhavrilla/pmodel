@@ -11,8 +11,8 @@ class Record(object):
 		self.domain = fields[5]
 		self.autoreg = fields[6] #uniqid for nodoms
 		self.uniqid = fields[7]
-		self.covratio = fields[8]
-		self.len = fields[9]
+		self.len = fields[8]
+		self.covratio = fields[9]
 		self.gene = fields[10]
 		self.maf = fields[11]
 		self.impact = fields[12]

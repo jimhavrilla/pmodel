@@ -140,7 +140,7 @@ then
         -a <(cat $DATA/doms-any-coverage.bed | tr -s "\t" " " | cut -d " " -f 1-45 | tr -s " " "\t") \
         -b <(awk '{if ($4>=5) print}' $DATA/coverage.bed) -wa -wb -sorted \
     | awk '{ct[$1 $2 $3 $45]++; len[$1 $2 $3 $45]=$4; row[$1 $2 $3 $45]=$0} END {for (i in ct) print row[i],(ct[i]==0 ? ct[i]=0: ct[i]), (len[i]==0 ? len[i]=1: len[i]),ct[i]/(len[i]==0 ? len[i]=1: len[i])}' \
-    | tr -s " " "\t" | cut -f 1-45,50- > $DATA/doms.bed
+    | tr -s " " "\t" | cut -f 1-45,50- | python lencount.py > $DATA/doms.bed
 else
     echo "FOUND $DATA/doms.bed"
 fi
