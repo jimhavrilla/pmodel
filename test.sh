@@ -196,3 +196,49 @@ cut -f 2 $DATA/transcripts.txt > $DATA/foo8738
 obs=$(bedtools subtract -b <(cat $DATA/doms-any-coverage.bed $DATA/nodoms-any-coverage.bed | cut -f 1-22) -a <(grep -wF -f $DATA/foo8738 $DATA/exons_sans_utrs.bed))
 exp=""
 check $obs $exp
+
+###############################################################################
+
+echo "pmodel.t5... test that doms and nodoms after coverage filtering are still exclusive"
+
+if [ ! -f $DATA/doms.bed ]
+then
+	echo "COULD NOT FIND $DATA/doms.bed"
+	exit
+fi
+
+if [ ! -f $DATA/nodoms.bed ]
+then
+	echo "COULD NOT FIND $DATA/nodoms.bed"
+	exit
+fi
+
+obs=$(bedtools intersect -a $DATA/doms.bed -b $DATA/nodoms.bed -wo | python test-different-transcripts.py)
+exp=""
+check $obs $exp
+
+################################################################################
+
+echo "pmodel.t6... test that dom variants and nodom variants are mutually exclusive"
+
+if [ ! -f "$DATA/VEPEXAC3filter.vcf.gz" ]
+then
+    echo "COULD NOT FIND $DATA/VEPEXAC3filter.vcf.gz"
+    exit
+fi
+
+if [ ! -f "$DATA/nodoms.bed" ]
+then
+    echo "COULD NOT FIND $DATA/nodoms.bed"
+    exit
+fi
+
+if [ ! -f "$DATA/doms.bed" ]
+then
+    echo "COULD NOT FIND $DATA/doms.bed"
+    exit
+fi
+
+obs=$(comm -1 -2 $DATA/nodomintfilter.bed $DATA/domintfilter.bed)
+exp=""
+check $obs $exp
