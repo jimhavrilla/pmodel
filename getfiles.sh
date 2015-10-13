@@ -127,10 +127,10 @@ then
     zcat < $DATA/Homo_sapiens.GRCh37.75.gtf.gz \
         | grep protein_coding$'\t'exon  \
         | perl -pe 's/protein_coding\texon\t//g' \
-        | grep -e '^\d*[0-9X-Y]\t' \
-        | perl gtf2bed.pl \
+        | grep -P '^\d*[0-9X-Y]\t' \
+        | awk 'BEGIN{FS=OFS="\t"}{$2=$2-1; print}' \
         | sort -k10,10 \
-        > $DATA/exons.bed
+        > $DATA/exons2.bed
 else
     echo "FOUND $DATA/exons.bed"
 fi
@@ -141,8 +141,8 @@ then
     zcat < $DATA/Homo_sapiens.GRCh37.75.gtf.gz \
         | grep protein_coding$'\t'UTR \
         | perl -pe 's/protein_coding\tUTR\t//g' \
-        | grep -e '^\d*[0-9X-Y]\t' \
-        | perl gtf2bed.pl \
+        | grep -P '^\d*[0-9X-Y]\t' \
+        | awk 'BEGIN{FS=OFS="\t"}{$2=$2-1; print}' \
         | sort -k10,10 \
         > $DATA/utrs.bed
 else
