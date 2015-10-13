@@ -3,10 +3,14 @@
 # do intersections for variants, merge lengths for autoreg+gene combos (lencount.py), get MAF, variant type (FG), gene, domain, chr, start, end, impact, other info for analysis
 
 # filter if AN_Adj >= 97129.6:
+
+if [[ ! -f $DATA/VEPEXAC3filter.vcf.gz ]]; then
 cat <(zgrep "^#" $DATA/VEPEXAC3.vcf.gz) <(zgrep -v "^#" $DATA/VEPEXAC3.vcf.gz \
-	| awk -F ';' '{if ($1 ~ /X|Y/) {t=$17} else t=$16} {sub(/\w+=/,"",t); if (t>=0.8*60706*2) print}' | grep -w PASS \
+	| awk -F ';' '{if ($1 ~ /X|Y/) {t=$17} else t=$16} {sub(/\w+=/,"",t); if (t>=0.8*60706*2) print}' \
+	| grep -w PASS \
 	| sort -k1,1 -k2,2n) \
-	| bgzip -c $DATA/VEPEXAC3filter.vcf.gz
+	| bgzip -c > $DATA/VEPEXAC3filter.vcf.gz
+fi
 
 #intersect
 
