@@ -239,6 +239,6 @@ then
     exit
 fi
 
-obs=$(comm -1 -2 $DATA/nodomintfilter.bed $DATA/domintfilter.bed)
+obs=$(bedtools intersect -a $DATA/nodomintfilter.bed -b $DATA/domintfilter.bed)
 exp=""
 check $obs $exp
