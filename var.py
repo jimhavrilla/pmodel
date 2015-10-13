@@ -78,7 +78,7 @@ if options.bool==True:
 				types=judge_impact(impacts)
 				csq1="\t".join([split_fields(csqstring[j],i) for i in range(0,4)])
 				csq2="\t".join([split_fields(csqstring[j],i) for i in range(4,9)])
-				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,".",r_.uniqid,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
+				print "\t".join([r_.chr,r_.start,r_.end,r_.ref,r_.alt,".",r_.uniqid,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
 
 if options.bool==False:
 	class Record(object):
@@ -129,4 +129,4 @@ if options.bool==False:
 				types=judge_impact(impacts)
 				csq1="\t".join([split_fields(csqstring[j],i) for i in range(0,4)])
 				csq2="\t".join([split_fields(csqstring[j],i) for i in range(4,9)])
-				print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,r_.domain,r_.autoreg,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
+				print "\t".join([r_.chr,r_.start,r_.end,r_.ref,r_.alt,r_.domain,r_.autoreg,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,impacts,types,csq1,j,csq2])
