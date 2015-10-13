@@ -130,7 +130,7 @@ then
         | grep -P '^\d*[0-9X-Y]\t' \
         | awk 'BEGIN{FS=OFS="\t"}{$2=$2-1; print}' \
         | sort -k10,10 \
-        > $DATA/exons2.bed
+        > $DATA/exons.bed
 else
     echo "FOUND $DATA/exons.bed"
 fi
