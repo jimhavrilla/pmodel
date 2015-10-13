@@ -107,4 +107,4 @@ if options.bool==False:
 
         alld = concat(r_)
         csq = "\t".join(alld[k] for k in keys)
-        print "\t".join([r_.chr,str(int(r_.start)-1),r_.end,r_.ref,r_.alt,r_.domain,r_.autoreg,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,alld['impact'],csq])
+        print "\t".join([r_.chr,r_.start,r_.end,r_.ref,r_.alt,r_.domain,r_.autoreg,r_.uniqid,r_.len,r_.covratio,r_.gene,r_.maf,alld['impact'],csq])
