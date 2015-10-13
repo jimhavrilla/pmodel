@@ -11,7 +11,7 @@ class Exon(object):
         self.start = fields[1]
         self.end = fields[2]
         self.info = "\t".join(fields[6:24]).rstrip()
-        self.uniqid = fields[7].strip(";").strip("\"")+"_"+fields[23].rstrip().strip(";").strip("\"")+"_NoDom"
+        self.uniqid = fields[7].strip(";").strip("\"")+"_"+fields[7].strip(";").strip("\"")+"_"+fields[23].rstrip().strip(";").strip("\"")+"_NoDom"
         self.transid = fields[9].strip(";").strip("\"")
 
     def __str__(self):
