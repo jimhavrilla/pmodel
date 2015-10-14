@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
 
@@ -65,6 +65,61 @@ def FRV_inline(intervals, maf_cutoff):
         s += sum(1.0 for af in afs if af <= maf_cutoff)
     return s / n
 
+def contingent(intervals, domain_name, nodoms_only=False):
+    """
+    intervals should be all intervals in all genes that contain the domain
+    """
+    import fisher
+
+    n_domain_variants = sum(len(i.mafs.split(",")) for i in intervals if i.domain == domain_name)
+    if nodoms_only:
+        n_gene_variants = sum(len(i.mafs.split(",")) for i in intervals if i.domain == ".")
+    else:
+        n_gene_variants = sum(len(i.mafs.split(",")) for i in intervals if i.domain != domain_name)
+
+    n_domain_bases, n_gene_bases = 0, 0
+    for iv in intervals:
+        starts = map(int, iv.starts.split(","))
+        ends = map(int, iv.ends.split(","))
+        l = sum(e - s for s, e in zip(starts, ends))
+        assert all(e > s for s, e in zip(starts, ends)), domain_name
+        if iv.domain == domain_name:
+            n_domain_bases += l
+        elif nodoms_only and iv.domain == ".":
+            n_gene_bases += l
+        elif not nodoms_only and iv.domain != domain_name:
+            n_gene_bases += l
+    tbl = "gene:%d/%d,dom:%d/%d" % (n_gene_variants, n_gene_bases, n_domain_variants, n_domain_bases)
+
+    p = fisher.pvalue(n_gene_bases, n_gene_variants, n_domain_bases, n_domain_variants)
+
+    denom = float(n_gene_variants) / (n_gene_bases or 1) or 1
+    return p.two_tail, (float(n_domain_variants) / (n_domain_bases or 1)) / denom, tbl
+
+def runcontingent(path):
+    import toolshed as ts
+    it = ts.reader(path)
+    iterable = (Interval(**iv) for iv in it)
+
+    by_transcript = defaultdict(list)
+    by_domain = defaultdict(list)
+    for iv in iterable:
+        by_domain[iv.domain].append(iv)
+        by_transcript[iv.transcript].append(iv)
+
+    print "domain\tpval\ttable\tratio\tn_intervals\tn_domain"
+    for domain, ivs in by_domain.items():
+        if len(ivs) < 2: continue
+        if domain == ".": continue
+        intervals = ivs[:]
+        for iv in ivs:
+            intervals.extend(by_transcript[iv.transcript])
+        intervals = set(intervals)
+        if len(intervals) < 3: continue
+        pval, ratio, tbl = contingent(intervals, domain, nodoms_only=False)
+        print "%s\t%.4g\t%s\t%.2f\t%d\t%d" % (domain, pval, tbl, ratio, len(intervals), len(ivs))
+
+
 def slider(iterable, grouper, metric, **kwargs):
     """
     >>> interval = namedtuple('interval', ['chrom', 'start', 'end', 'value'])
@@ -98,27 +153,37 @@ def slider(iterable, grouper, metric, **kwargs):
     for chunk in windower(iterable, grouper):
         yield chunk, metric(chunk, **kwargs)
 
+
+class Interval(object):
+    def __init__(self, **entries):
+        entries['start'] = int(entries['start'])
+        entries['end'] = int(entries['end'])
+        self.__dict__.update(entries)
+    def __repr__(self):
+        return "interval('%s@%s:%d-%d')" % (self.autoregs, self.chr, self.start, self.end)
+
+    def __eq__(self, other):
+        return self.__hash__() == other.__hash__()
+
+    def __hash__(self):
+        return hash(self.autoregs)
+
 def example():
     import toolshed as ts
     from collections import namedtuple
 
-    class interval(object):
-        def __init__(self, **entries):
-            entries['start'] = int(entries['start'])
-            entries['end'] = int(entries['end'])
-            self.__dict__.update(entries)
-        def __repr__(self):
-            return "interval('%s@%s:%d-%d')" % (self.autoregs, self.chr, self.start, self.end)
-
-
     it = ts.reader('/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz')
-    iterable = (interval(**iv) for iv in it)
+    iterable = (Interval(**iv) for iv in it)
     for gene, val in slider(iterable, size_grouper(1), FRV_inline, maf_cutoff=0.005):
         print "%s\t%.3f\t%.3f" % (gene[0].autoregs, val, IAFI_inline(gene, 65000))
+
+def example2():
+    runcontingent('/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz')
 
 
 if __name__ == "__main__":
     import doctest
-    print(doctest.testmod())
+    import sys
+    print >>sys.stderr, (doctest.testmod())
 
-    example()
+    example2()
