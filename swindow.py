@@ -96,7 +96,41 @@ def contingent(intervals, domain_name, nodoms_only=False):
     denom = float(n_gene_variants) / (n_gene_bases or 1) or 1
     return p.two_tail, (float(n_domain_variants) / (n_domain_bases or 1)) / denom, tbl
 
+def overlaps(a, b):
+    return a[0] < b.end and a[1] > b.start
+
+def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
+                                                v.INFO.get("CLNSIG", 0) in "456"):
+    """
+    given a some chunks with a metric applied, do we see a difference in
+    the values between pathogenic and non pathogenic variants?
+    """
+    from cyvcf2 import VCF
+
+    iterable = list(iterable)
+
+    tbl = {True: [], False: []}
+
+    by_chrom = defaultdict(list)
+    for it in iterable:
+        by_chrom[it[0][0].chrom].append(it)
+
+
+    for v in VCF(vcf_path):
+        patho = is_pathogenic(v)
+
+        cvars = by_chrom[v.CHROM]
+        def chunkse(chunk):
+            return chunk[0].start, chunk[-1].end
+
+        vals = [it[1] for it in cvars if overlaps(chunkse(it[0]), v)]
+        tbl[patho].extend(vals)
+
+    return tbl
+
+
 def runcontingent(path):
+    from entropy import entropy
     import toolshed as ts
     it = ts.reader(path)
     iterable = (Interval(**iv) for iv in it)
@@ -107,7 +141,7 @@ def runcontingent(path):
         by_domain[iv.domain].append(iv)
         by_transcript[iv.transcript].append(iv)
 
-    print "domain\tpval\ttable\tratio\tn_intervals\tn_domain"
+    print "domain\tburden_pval\ttable\tratio\tn_intervals\tn_domain\tentropy"
     for domain, ivs in by_domain.items():
         if len(ivs) < 2: continue
         if domain == ".": continue
@@ -117,7 +151,8 @@ def runcontingent(path):
         intervals = set(intervals)
         if len(intervals) < 3: continue
         pval, ratio, tbl = contingent(intervals, domain, nodoms_only=False)
-        print "%s\t%.4g\t%s\t%.2f\t%d\t%d" % (domain, pval, tbl, ratio, len(intervals), len(ivs))
+        ent = entropy(intervals)
+        print "%s\t%.4g\t%s\t%.2f\t%d\t%d\t%.4f" % (domain, pval, tbl, ratio, len(intervals), len(ivs), ent)
 
 
 def slider(iterable, grouper, metric, **kwargs):
@@ -158,6 +193,7 @@ class Interval(object):
     def __init__(self, **entries):
         entries['start'] = int(entries['start'])
         entries['end'] = int(entries['end'])
+        entries['chrom'] = entries['chr']
         self.__dict__.update(entries)
     def __repr__(self):
         return "interval('%s@%s:%d-%d')" % (self.autoregs, self.chr, self.start, self.end)
@@ -177,8 +213,26 @@ def example():
     for gene, val in slider(iterable, size_grouper(1), FRV_inline, maf_cutoff=0.005):
         print "%s\t%.3f\t%.3f" % (gene[0].autoregs, val, IAFI_inline(gene, 65000))
 
+
 def example2():
     runcontingent('/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz')
+
+def example3():
+    import toolshed as ts
+    from matplotlib import pyplot as plt
+
+    it = ts.reader('/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz')
+    iterable = (Interval(**iv) for iv in it)
+
+    res = list(slider(iterable, size_grouper(1), FRV_inline, maf_cutoff=0.005))
+
+    fig, axes = plt.subplots(2)
+    counts = evaldoms(res, "/uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz")
+    axes[0].hist(counts[True])
+    axes[0].set_xlabel("pathogenic")
+    axes[1].hist(counts[False])
+    axes[0].set_xlabel("not-pathogenic")
+    plt.show()
 
 
 if __name__ == "__main__":
