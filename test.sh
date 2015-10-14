@@ -239,6 +239,6 @@ then
     exit
 fi
 
-obs=$(bedtools intersect -a $DATA/nodomintfilter.bed -b $DATA/domintfilter.bed)
+obs=$(bedtools intersect -a $DATA/domintfilter.bed -b $DATA/nodomintfilter.bed -wa -wb | python test-intersections.py)
 exp=""
 check $obs $exp
