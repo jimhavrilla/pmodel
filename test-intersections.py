@@ -23,5 +23,5 @@ for line in sys.stdin:
 	fields=line.rstrip().split("\t")
 	wa=DomInts(fields)
 	wb=NodomInts(fields)
-	if not ((wb.start-len(wa.ref)+1)<wa.end or (wa.start-len(wb.ref)+1)<wb.end):
+	if not ((wb.start-len(wa.ref)+1)<=wa.end or (wa.start-len(wb.ref)+1)<=wb.end):
 		print line
