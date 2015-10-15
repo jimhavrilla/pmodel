@@ -1,3 +1,4 @@
+import toolshed as ts
 from collections import namedtuple, defaultdict
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
@@ -144,6 +145,7 @@ def runcontingent(path):
     print "domain\tburden_pval\ttable\tratio\tn_intervals\tn_domain\tentropy"
     for domain, ivs in by_domain.items():
         if len(ivs) < 2: continue
+        if sum(iv.mafs.count(',') for iv in ivs) < 3: continue
         if domain == ".": continue
         intervals = ivs[:]
         for iv in ivs:
@@ -188,6 +190,12 @@ def slider(iterable, grouper, metric, **kwargs):
     for chunk in windower(iterable, grouper):
         yield chunk, metric(chunk, **kwargs)
 
+def tfloat(n):
+    try:
+        return float(n)
+    except ValueError:
+        return min(map(float, n.split("|")))
+
 
 class Interval(object):
     def __init__(self, **entries):
@@ -195,6 +203,7 @@ class Interval(object):
         entries['end'] = int(entries['end'])
         entries['chrom'] = entries['chr']
         self.__dict__.update(entries)
+
     def __repr__(self):
         return "interval('%s@%s:%d-%d')" % (self.autoregs, self.chr, self.start, self.end)
 
@@ -204,18 +213,69 @@ class Interval(object):
     def __hash__(self):
         return hash(self.autoregs)
 
+    @property
+    def istarts(self):
+        return map(int, self.starts.split(","))
+
+    @property
+    def iends(self):
+        return map(int, self.ends.split(","))
+
+    @property
+    def positions(self):
+        if self.pos == ".": return []
+        return map(int, self.pos.split(","))
+
+    @property
+    def fmafs(self):
+        if self.mafs == ".": return []
+        return map(tfloat, self.mafs.split(","))
+
+    def split(self, include_empties=False):
+        posns, mafs = [x - 1 for x in self.positions], self.fmafs
+        if include_empties:
+            starts, ends = self.istarts, self.iends
+            for s, e in zip(starts, ends):
+                for ip in range(s, e):
+                    if not ip in posns:
+                        posns.append(ip)
+                        mafs.append(0.0)
+
+        pms = sorted(zip(posns, mafs))
+
+        for p, maf in pms:
+            I = Interval(**dict(self.__dict__.items()))
+            I.start = p
+            I.end = p + 1
+            I.__dict__['mafs'] = str(maf)
+            I.__dict__['pos'] = str(p + 1)
+            I.aaf = maf
+            yield I
+
+class JimFile(object):
+    def __init__(self, path, include_empties=True):
+        self.path = path
+        self.include_empties = include_empties
+
+    def __iter__(self):
+        for d in ts.reader(self.path):
+            d = Interval(**d)
+            for p in d.split(self.include_empties):
+                yield p
+
+
 def example():
     import toolshed as ts
     from collections import namedtuple
 
-    it = ts.reader('/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz')
+    it = ts.reader('/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz')
     iterable = (Interval(**iv) for iv in it)
     for gene, val in slider(iterable, size_grouper(1), FRV_inline, maf_cutoff=0.005):
         print "%s\t%.3f\t%.3f" % (gene[0].autoregs, val, IAFI_inline(gene, 65000))
 
 
 def example2():
-    runcontingent('/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz')
+    runcontingent('/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz')
 
 def example3():
     import toolshed as ts
