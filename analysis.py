@@ -1,5 +1,5 @@
 
-m swindow import JimFile, windower
+from swindow import JimFile, windower
 from math import log10
 
 iterator = JimFile('/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz')
