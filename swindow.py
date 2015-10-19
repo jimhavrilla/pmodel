@@ -101,7 +101,7 @@ def overlaps(a, b):
     return a[0] < b.end and a[1] > b.start
 
 def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
-                                                v.INFO.get("CLNSIG", 0) in "456"):
+                                                v.INFO.get("CLNSIG", 0) in "45"):
     """
     given a some chunks with a metric applied, do we see a difference in
     the values between pathogenic and non pathogenic variants?
@@ -279,6 +279,8 @@ def example2():
 
 def example3():
     import toolshed as ts
+    import matplotlib
+    matplotlib.use('Agg')
     from matplotlib import pyplot as plt
 
     it = ts.reader('/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz')
@@ -291,8 +293,8 @@ def example3():
     axes[0].hist(counts[True])
     axes[0].set_xlabel("pathogenic")
     axes[1].hist(counts[False])
-    axes[0].set_xlabel("not-pathogenic")
-    plt.show()
+    axes[1].set_xlabel("not-pathogenic")
+    plt.savefig('myfig')
 
 
 if __name__ == "__main__":
@@ -300,4 +302,4 @@ if __name__ == "__main__":
     import sys
     print >>sys.stderr, (doctest.testmod())
 
-    example2()
+    example3()

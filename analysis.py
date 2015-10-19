@@ -1,6 +1,7 @@
 
 from swindow import JimFile, windower
 from math import log10
+import numpy as np
 
 iterator = JimFile('/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz')
 
@@ -19,10 +20,37 @@ def bytranscriptdist(grp, inext):
     return inext.transcript != grp[0].transcript \
             or inext.start - grp[-1].end > 50
 
+def rescale(vals):
+    mean, std = np.mean(vals), np.std(vals)
+    #minv, maxv = min(vals), max(vals)
+    #return [float(v - minv) / ((maxv - minv) or 1) for v in vals]
+    return [float(v)/(std or 1) for v in vals]
+
 # allow a gap of at most 50 bases.
+from collections import defaultdict
+saved = defaultdict(list)
 for chunk in windower(iterator, bytranscriptdist):
+
     frv = FRV(chunk)
     iafi = IAFI(chunk)
-    print "%s\t%d\t%d\t%.3f\t%.3f\t%s" % (chunk[0].chrom, chunk[0].start,
-                                          chunk[-1].end, frv, iafi,
-                                          chunk[0].transcript)
+    
+    saved["chrom"].append(chunk[0].chrom)
+    saved["start"].append(chunk[0].start)
+    saved["end"].append(chunk[-1].end)
+    saved["frv"].append(frv)
+    saved["iafi"].append(iafi)
+    saved["trans"].append(chunk[0].transcript)
+
+origfrv = saved["frv"]
+origiafi = saved["iafi"]
+saved["iafi"] = rescale(saved["iafi"])
+saved["frv"] = rescale(saved["frv"])
+
+for i in range(len(saved["chrom"])):
+    print "%s\t%d\t%d\t%.3f\t%.3f\t%s" % (
+            saved["chrom"][i],
+            saved["start"][i],
+            saved["end"][i],
+            saved["iafi"][i] * origiafi[i],
+            saved["frv"][i] * origfrv[i],
+            saved["trans"][i])
