@@ -1,5 +1,5 @@
 import toolshed as ts
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, Counter
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
 
@@ -231,8 +231,20 @@ class Interval(object):
         if self.mafs == ".": return []
         return map(tfloat, self.mafs.split(","))
 
+    @property
+    def ftypes(self):
+        import re
+        if self.types == ".":
+            self.dn = 0; self.ds = 0; self.na = 0
+        types = Counter(re.split("\||,", self.types))
+        self.dn = types['dn']
+        self.ds = types['ds']
+        self.na = types['na']
+        self.dn_ds = float(types['dn'])/float(types['ds'] or 1)
+        return self.dn, self.ds, self.na, self.dn_ds
+
     def split(self, include_empties=False):
-        posns, mafs = [x - 1 for x in self.positions], self.fmafs
+        posns, mafs, types = [x - 1 for x in self.positions], self.fmafs, self.impacts
         if include_empties:
             starts, ends = self.istarts, self.iends
             for s, e in zip(starts, ends):
@@ -240,15 +252,17 @@ class Interval(object):
                     if not ip in posns:
                         posns.append(ip)
                         mafs.append(0.0)
+                        types.append(None)
 
-        pms = sorted(zip(posns, mafs))
+        pms = sorted(zip(posns, mafs, types))
 
-        for p, maf in pms:
+        for p, maf, dntype in pms:
             I = Interval(**dict(self.__dict__.items()))
             I.start = p
             I.end = p + 1
             I.__dict__['mafs'] = str(maf)
             I.__dict__['pos'] = str(p + 1)
+            I.__dict__['dnds'] = dntype
             I.aaf = maf
             yield I
 

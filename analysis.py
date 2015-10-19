@@ -14,11 +14,24 @@ def IAFI(intervals, n_samples=65000):
     val = sum(1.0/max(iv.aaf, minaf) for iv in intervals)
     return log10(val / len(intervals))
 
+def dnds_ratio(intervals):
+    dn, ds = 0, 0    
+    for iv in self.intervals:
+        if iv.dnds is None:
+            continue
+        dnds = iv.dnds.split('|')
+        dn += dnds.count('dn')
+        ds += dnds.count('ds')
+    return dn / float(ds or 1.0)
+
 
 def bytranscriptdist(grp, inext):
     """ group by transcript and split at gaps > 50 bases"""
     return inext.transcript != grp[0].transcript \
             or inext.start - grp[-1].end > 50
+
+def smallchunk(grp, inext):
+    return len(grp) > 50 or inext.transcript != grp[0].transcript
 
 def rescale(vals):
     mean, std = np.mean(vals), np.std(vals)
@@ -41,8 +54,6 @@ for chunk in windower(iterator, bytranscriptdist):
     saved["iafi"].append(iafi)
     saved["trans"].append(chunk[0].transcript)
 
-origfrv = saved["frv"]
-origiafi = saved["iafi"]
 saved["iafi"] = rescale(saved["iafi"])
 saved["frv"] = rescale(saved["frv"])
 
@@ -51,6 +62,6 @@ for i in range(len(saved["chrom"])):
             saved["chrom"][i],
             saved["start"][i],
             saved["end"][i],
-            saved["iafi"][i] * origiafi[i],
-            saved["frv"][i] * origfrv[i],
+            saved["iafi"][i],
+            saved["frv"][i],
             saved["trans"][i])
