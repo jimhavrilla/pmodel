@@ -233,18 +233,11 @@ class Interval(object):
 
     @property
     def ftypes(self):
-        import re
-        if self.types == ".":
-            self.dn = 0; self.ds = 0; self.na = 0
-        types = Counter(re.split("\||,", self.types))
-        self.dn = types['dn']
-        self.ds = types['ds']
-        self.na = types['na']
-        self.dn_ds = float(types['dn'])/float(types['ds'] or 1)
-        return self.dn, self.ds, self.na, self.dn_ds
+        if self.impacts == ".": return [] #impacts and types are switched, should fix later
+        return self.impacts.split(",")
 
     def split(self, include_empties=False):
-        posns, mafs, types = [x - 1 for x in self.positions], self.fmafs, self.impacts
+        posns, mafs, types = [x - 1 for x in self.positions], self.fmafs, self.ftypes
         if include_empties:
             starts, ends = self.istarts, self.iends
             for s, e in zip(starts, ends):

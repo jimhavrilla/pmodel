@@ -2,8 +2,10 @@
 from swindow import JimFile, windower
 from math import log10
 import numpy as np
+import sys
 
-iterator = JimFile('/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz')
+myfile = sys.argv[1]
+iterator = JimFile(myfile) #/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz
 
 
 def FRV(intervals, maf_cutoff=1.0/10000):
@@ -16,7 +18,7 @@ def IAFI(intervals, n_samples=65000):
 
 def dnds_ratio(intervals):
     dn, ds = 0, 0    
-    for iv in self.intervals:
+    for iv in intervals:
         if iv.dnds is None:
             continue
         dnds = iv.dnds.split('|')
@@ -31,37 +33,39 @@ def bytranscriptdist(grp, inext):
             or inext.start - grp[-1].end > 50
 
 def smallchunk(grp, inext):
-    return len(grp) > 50 or inext.transcript != grp[0].transcript
+    return len(grp) > 30 or inext.transcript != grp[0].transcript \
+        or inext.start - grp[-1].end > 30
 
 def rescale(vals):
-    mean, std = np.mean(vals), np.std(vals)
-    #minv, maxv = min(vals), max(vals)
-    #return [float(v - minv) / ((maxv - minv) or 1) for v in vals]
-    return [float(v)/(std or 1) for v in vals]
+    minv, maxv = min(vals), max(vals)
+    return [float(v - minv) / ((maxv - minv) or 1) for v in vals]
 
 # allow a gap of at most 50 bases.
 from collections import defaultdict
 saved = defaultdict(list)
-for chunk in windower(iterator, bytranscriptdist):
+for chunk in windower(iterator, smallchunk):
 
     frv = FRV(chunk)
     iafi = IAFI(chunk)
+    dnds = dnds_ratio(chunk)
     
     saved["chrom"].append(chunk[0].chrom)
     saved["start"].append(chunk[0].start)
     saved["end"].append(chunk[-1].end)
     saved["frv"].append(frv)
     saved["iafi"].append(iafi)
+    saved["dnds"].append(dnds)
     saved["trans"].append(chunk[0].transcript)
 
 saved["iafi"] = rescale(saved["iafi"])
 saved["frv"] = rescale(saved["frv"])
 
 for i in range(len(saved["chrom"])):
-    print "%s\t%d\t%d\t%.3f\t%.3f\t%s" % (
+    print "%s\t%d\t%d\t%.3f\t%.3f\t%.3f\t%s" % (
             saved["chrom"][i],
             saved["start"][i],
             saved["end"][i],
             saved["iafi"][i],
             saved["frv"][i],
+            saved["dnds"][i],
             saved["trans"][i])
