@@ -1,5 +1,6 @@
 import toolshed as ts
 from collections import namedtuple, defaultdict, Counter
+from operator import attrgetter
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
 
@@ -265,10 +266,20 @@ class JimFile(object):
         self.include_empties = include_empties
 
     def __iter__(self):
+        cache = []
         for d in ts.reader(self.path):
             d = Interval(**d)
-            for p in d.split(self.include_empties):
-                yield p
+            # keep appending to the cache until we reach a different transcript
+            # because nodoms occur in a different line from the domains but we
+            # want everything to come out in order.
+            if len(cache) > 0 and d.transcript != cache[0].transcript:
+                for iv in sorted(cache, key=attrgetter('start')):
+                    yield iv
+                cache = []
+            for iv in d.split(self.include_empties):
+                cache.append(iv)
+        for iv in cache:
+            yield iv
 
 
 def example():
