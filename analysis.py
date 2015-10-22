@@ -17,14 +17,20 @@ def IAFI(intervals, n_samples=65000):
     return log10(val / len(intervals))
 
 def dnds_ratio(intervals):
-    dn, ds = 0, 0    
+    dn, ds, na = 0, 0, 0
+    values = defaultdict(list)  
     for iv in intervals:
         if iv.dnds is None:
             continue
         dnds = iv.dnds.split('|')
         dn += dnds.count('dn')
         ds += dnds.count('ds')
-    return dn / float(ds or 1.0)
+        na += dnds.count('na')
+    values['dn'] = dn
+    values['ds'] = ds
+    values['na'] = na
+    values['dnds'] = dn / float(ds or 1.0)
+    return values
 
 
 def bytranscriptdist(grp, inext):
@@ -33,8 +39,8 @@ def bytranscriptdist(grp, inext):
             or inext.start - grp[-1].end > 50
 
 def smallchunk(grp, inext):
-    return len(grp) > 30 or inext.transcript != grp[0].transcript \
-        or inext.start - grp[-1].end > 30
+    return len(grp) > 20 or inext.transcript != grp[0].transcript \
+        or inext.start - grp[-1].end > 20
 
 def rescale(vals):
     minv, maxv = min(vals), max(vals)
@@ -47,25 +53,31 @@ for chunk in windower(iterator, smallchunk):
 
     frv = FRV(chunk)
     iafi = IAFI(chunk)
-    dnds = dnds_ratio(chunk)
+    values = dnds_ratio(chunk)
     
     saved["chrom"].append(chunk[0].chrom)
     saved["start"].append(chunk[0].start)
     saved["end"].append(chunk[-1].end)
     saved["frv"].append(frv)
     saved["iafi"].append(iafi)
-    saved["dnds"].append(dnds)
+    saved["dnds"].append(values["dnds"])
+    saved["dn"].append(values["dn"])
+    saved["ds"].append(values["ds"])
+    saved["na"].append(values["na"])
     saved["trans"].append(chunk[0].transcript)
 
 saved["iafi"] = rescale(saved["iafi"])
 saved["frv"] = rescale(saved["frv"])
 
 for i in range(len(saved["chrom"])):
-    print "%s\t%d\t%d\t%.3f\t%.3f\t%.3f\t%s" % (
+    print "%s\t%d\t%d\t%.3f\t%.3f\t%.3f\t%d\t%d\t%d\t%s" % (
             saved["chrom"][i],
             saved["start"][i],
             saved["end"][i],
             saved["iafi"][i],
             saved["frv"][i],
             saved["dnds"][i],
+            saved["dn"][i],
+            saved["ds"][i],
+            saved["na"][i],
             saved["trans"][i])
