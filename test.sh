@@ -221,24 +221,50 @@ check $obs $exp
 
 echo "pmodel.t6... test that dom variants and nodom variants are mutually exclusive"
 
-if [ ! -f "$DATA/VEPEXAC3filter.vcf.gz" ]
+
+if [ ! -f "$DATA/domintfilter.bed" ]
 then
-    echo "COULD NOT FIND $DATA/VEPEXAC3filter.vcf.gz"
+    echo "COULD NOT FIND $DATA/domintfilter.bed"
     exit
 fi
 
-if [ ! -f "$DATA/nodoms.bed" ]
+if [ ! -f "$DATA/nodomintfilter.bed" ]
 then
-    echo "COULD NOT FIND $DATA/nodoms.bed"
+    echo "COULD NOT FIND $DATA/nodomintfilter.bed"
     exit
 fi
 
-if [ ! -f "$DATA/doms.bed" ]
-then
-    echo "COULD NOT FIND $DATA/doms.bed"
-    exit
-fi
-
-obs=$(bedtools intersect -a $DATA/domintfilter.bed -b $DATA/nodomintfilter.bed -wa -wb | python test-intersections.py)
+obs=$( (paste -d "" \
+            <(head -n1 $DATA/domintfilter.bed | awk '{split($0,a,"\t"); for(i = 1; i <= length(a); ++i) printf a[i]""1"\t"; }') \
+            <(head -n1 $DATA/nodomintfilter.bed | awk '{split($0,a,"\t"); for(i = 1; i <= length(a); ++i) printf a[i]""2"\t"; }'); \
+        bedtools intersect \
+           -sorted -wa -wb \
+           -a $DATA/domintfilter.bed \
+           -b $DATA/nodomintfilter.bed) \
+        | ./match_on_header.py --headers "transcript_id1,transcript_id2")
 exp=""
 check $obs $exp
+
+################################################################################
+
+echo "pmodel.t7... test unwanted transcripts in allintfilter.bed "
+
+
+if [ ! -f "$DATA/transcripts.txt" ]
+then
+    echo "COULD NOT FIND $DATA/transcripts.txt"
+    exit
+fi
+
+if [ ! -f "$DATA/allintfilter.bed" ]
+then
+    echo "COULD NOT FIND $DATA/allintfilter.bed"
+    exit
+fi
+
+cat $DATA/transcripts.txt | cut -f2  | sort -u > transcripts.txt.sort
+cat $DATA/allintfilter.bed | ./print_header.py --header "transcript_id" | uniq | sort -u > allintfilter.bed.uniq.transcript_id
+obs=$(grep -cvwFf transcripts.txt.sort  allintfilter.bed.uniq.transcript_id)
+exp="0"
+check $obs $exp
+rm -f transcripts.txt.sort allintfilter.bed.uniq.transcript_id

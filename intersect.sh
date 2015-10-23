@@ -12,18 +12,86 @@ cat <(zgrep "^#" $DATA/VEPEXAC3.vcf.gz) <(zgrep -v "^#" $DATA/VEPEXAC3.vcf.gz \
 	| bgzip -c > $DATA/VEPEXAC3filter.vcf.gz
 fi
 
+if [[ ! -f  $DATA/doms.fix.sort.bed ]]
+then
+    cat $DATA/doms.bed  \
+    | python fix_doms.py  \
+    | bedtools sort -i stdin -header \
+    > $DATA/doms.fix.sort.bed
+fi
+
+if [[ ! -f  $DATA/nodoms.fix.sort.bed ]]
+then
+    cat $DATA/nodoms.bed \
+    | python fix_nodoms.py  \
+    | bedtools sort -i stdin -header \
+    > $DATA/nodoms.fix.sort.bed
+fi
+
 #intersect
 
-bedtools intersect -a <(cut -f 1,2,3,11,15,25,27,33,43,45,47,48 $DATA/doms.bed \
-	| sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -sorted -wb \
-    | cut -f 1,2,3,4,5,6,8,10,11,12,16,17,20 \
-	| python int-filter.py -d | sort -k1,1 -k2,2n > $DATA/domintfilter.bed
+if [[ ! -f  $DATA/doms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed ]]
+then
+    (paste \
+        <(head -n1 $DATA/doms.fix.sort.bed) \
+        <(bcftools view -h $DATA/VEPEXAC3filter.vcf.gz | tail -n1 ); \
+    bedtools intersect \
+        -sorted -wa -wb -header \
+        -a $DATA/doms.fix.sort.bed \
+        -b $DATA/VEPEXAC3filter.vcf.gz \
+        | bedtools sort -i stdin) \
+    > $DATA/doms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed
+fi
 
-bedtools intersect -a <(cut -f 1,2,3,8,12,24,26,27 $DATA/nodoms.bed \
-    | tr -s " " "\t" | sort -k1,1 -k2,2n -k3,3n) -b $DATA/VEPEXAC3filter.vcf.gz -sorted -wb \
-    | cut -f 1,2,3,4,5,6,7,8,12,13,16 \
-    | python int-filter.py -n | sort -k1,1 -k2,2n > $DATA/nodomintfilter.bed
+if [[ ! -f  $DATA/nodoms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed ]]
+then
+    (paste \
+        <(head -n1 $DATA/nodoms.fix.sort.bed) \
+        <(bcftools view -h $DATA/VEPEXAC3filter.vcf.gz | tail -n1 ); \
+    bedtools intersect \
+        -sorted -wa -wb -header \
+        -a $DATA/nodoms.fix.sort.bed \
+        -b $DATA/VEPEXAC3filter.vcf.gz \
+    | bedtools sort -i stdin) \
+    > $DATA/nodoms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed
+fi
 
-# assign types to impacts
+if [[ ! -f $DATA/doms.fix.sort.bed.NI.VEPEXAC3filter.vcf.gz.bed ]] 
+then
+    bedtools intersect \
+        -v -sorted -header\
+        -a $DATA/doms.fix.sort.bed \
+        -b $DATA/doms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed \
+        -sorted \
+        > $DATA/doms.fix.sort.bed.NI.VEPEXAC3filter.vcf.gz.bed
+fi
 
-cat $DATA/domintfilter.bed $DATA/nodomintfilter.bed | cat <(printf "#chr,start,end,ref,alt,pfamA_id,autoreg,uniqid,length_of_region,covratio,gene_symbol,maf,impact,type,codons,amino_acids,gene_id_csq,gene_symbol_csq,transcript_id_csq,exon_number_csq,polyphen,sift,protein_position,biotype\n") <(awk 'NR==FNR{a[$2]}$19 in a{print $0}' $DATA/transcripts.txt - | sort -k11,11 -k7,7) > $DATA/allintfilter.bed
+if [[ ! -f $DATA/nodoms.fix.sort.bed.NI.VEPEXAC3filter.vcf.gz.bed ]] 
+then
+    bedtools intersect \
+        -v -sorted -header\
+        -a $DATA/nodoms.fix.sort.bed \
+        -b $DATA/nodoms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed \
+        > $DATA/nodoms.fix.sort.bed.NI.VEPEXAC3filter.vcf.gz.bed
+fi
+
+if [[ ! -f  $DATA/nodomintfilter.bed ]]
+then
+    cat $DATA/nodoms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed \
+        | python filter_doms.py \
+        > $DATA/nodomintfilter.bed
+fi
+
+if [[ ! -f $DATA/domintfilter.bed ]]
+then
+    cat $DATA/doms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed \
+        | python filter_doms.py \
+        > $DATA/domintfilter.bed
+fi
+
+if [[ ! -f $DATA/allintfilter.bed ]]
+then
+    (cat $DATA/domintfilter.bed; tail -n+2 $DATA/nodomintfilter.bed) \
+        | bedtools sort -i stdin -header  \
+        > $DATA/allintfilter.bed
+fi
