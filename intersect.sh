@@ -29,7 +29,6 @@ then
 fi
 
 #intersect
-
 if [[ ! -f  $DATA/doms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed ]]
 then
     (paste \
@@ -81,7 +80,6 @@ then
         | python filter_doms.py \
         > $DATA/nodomintfilter.bed
 fi
-
 if [[ ! -f $DATA/domintfilter.bed ]]
 then
     cat $DATA/doms.fix.sort.bed.I.VEPEXAC3filter.vcf.gz.bed \
