@@ -67,6 +67,20 @@ def FRV_inline(intervals, maf_cutoff):
         s += sum(1.0 for af in afs if af <= maf_cutoff)
     return s / n
 
+def constraint(intervals, maf_cutoff):
+    
+    import re
+    dn, ds, na = 0, 0, 0
+    values = defaultdict(list)
+    for iv in intervals:
+        if iv.type is None:
+            continue
+        dnds = re.split(',|\|',iv.type)
+        dn += dnds.count('dn')
+        ds += dnds.count('ds')
+        na += dnds.count('na')
+    return float(dn) / (ds or 1)
+
 def contingent(intervals, domain_name, nodoms_only=False):
     """
     intervals should be all intervals in all genes that contain the domain
@@ -338,10 +352,12 @@ def example2():
         dom_muts = float(tbl[i].split(",")[1].split(":")[1].split("/")[0])
         print "%s\t%s\t%.4g\t%s\t%.2f\t%d\t%d\t%d\t%.4f" % (domain[i], genes[i], adj_p[i], tbl[i], ratio[i], num_intervals[i], num_domains[i], num_genes, ent[i])
         gd.append(log(num_genes,2))
-        s.append(log(dom_muts,10)*8)
+        s.append(log(dom_muts,10)*10)
         
     #matplotlib.use('Agg')
     sc = plt.scatter(ent, adj_p, c = gd, s=s, edgecolors='none', cmap=cm.spectral)
+    plt.xlim((0,1.05))
+    plt.ylim((-1,11))
     plt.xlabel('Normalized Shannon entropy score')
     plt.ylabel('Mutational burden (-log10 p-value)')
     cb = plt.colorbar(sc, shrink = 0.5)
@@ -369,24 +385,28 @@ def example3():
     import matplotlib
     matplotlib.use('Agg')
     from matplotlib import pyplot as plt
+    from scipy.stats import mannwhitneyu as mw
 
-    it = ts.reader('/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz')
+    it = ts.reader(sys.argv[1]) #'/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz'
     iterable = (Interval(**iv) for iv in it)
 
-    res = list(slider(iterable, size_grouper(1), FRV_inline, maf_cutoff=0.005))
+    res = list(slider(iterable, size_grouper(1), constraint, maf_cutoff=0.005))
 
     fig, axes = plt.subplots(2)
-    counts = evaldoms(res, "/uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz")
+    counts = evaldoms(res, sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
     axes[0].hist(counts[True])
     axes[0].set_xlabel("pathogenic")
     axes[1].hist(counts[False])
     axes[1].set_xlabel("not-pathogenic")
     plt.savefig('myfig')
-
+    with open('trues.txt', 'w') as fh:
+        fh.write("\n".join("%.3f" % v for v in counts[True]))
+    with open('falses.txt', 'w') as fh:
+        fh.write("\n".join("%.3f" % v for v in counts[False]))
 
 if __name__ == "__main__":
     import doctest
     import sys
     print >>sys.stderr, (doctest.testmod())
 
-    example2()
+    example3()
