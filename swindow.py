@@ -78,9 +78,10 @@ def contingent(intervals, domain_name, nodoms_only=False):
         n_gene_variants = sum(len(i.mafs.split(",")) for i in intervals if i.domain == ".")
     else:
         n_gene_variants = sum(len(i.mafs.split(",")) for i in intervals if i.domain != domain_name)
-
+    gene=set()
     n_domain_bases, n_gene_bases = 0, 0
     for iv in intervals:
+        gene.add(iv.gene)
         starts = map(int, iv.starts.split(","))
         ends = map(int, iv.ends.split(","))
         l = sum(e - s for s, e in zip(starts, ends))
@@ -96,7 +97,7 @@ def contingent(intervals, domain_name, nodoms_only=False):
     p = fisher.pvalue(n_gene_bases, n_gene_variants, n_domain_bases, n_domain_variants)
 
     denom = float(n_gene_variants) / (n_gene_bases or 1) or 1
-    return p.two_tail, (float(n_domain_variants) / (n_domain_bases or 1)) / denom, tbl
+    return p.two_tail, (float(n_domain_variants) / (n_domain_bases or 1)) / denom, tbl, gene
 
 def overlaps(a, b):
     return a[0] < b.end and a[1] > b.start
@@ -136,14 +137,14 @@ def runcontingent(path):
     import toolshed as ts
     it = ts.reader(path)
     iterable = (Interval(**iv) for iv in it)
-
+    values = defaultdict(list)
+    genes = set()
     by_transcript = defaultdict(list)
     by_domain = defaultdict(list)
     for iv in iterable:
         by_domain[iv.domain].append(iv)
         by_transcript[iv.transcript].append(iv)
 
-    print "domain\tburden_pval\ttable\tratio\tn_intervals\tn_domain\tentropy"
     for domain, ivs in by_domain.items():
         if len(ivs) < 2: continue
         if sum(iv.mafs.count(',') for iv in ivs) < 3: continue
@@ -153,10 +154,19 @@ def runcontingent(path):
             intervals.extend(by_transcript[iv.transcript])
         intervals = set(intervals)
         if len(intervals) < 3: continue
-        pval, ratio, tbl = contingent(intervals, domain, nodoms_only=False)
+        pval, ratio, tbl, gene = contingent(intervals, domain, nodoms_only=False)
         ent = entropy(intervals)
-        print "%s\t%.4g\t%s\t%.2f\t%d\t%d\t%.4f" % (domain, pval, tbl, ratio, len(intervals), len(ivs), ent)
-
+        values['domain'].append(domain)
+        values['pval'].append(pval)
+        values['ent'].append(ent)
+        values['tbl'].append(tbl)
+        values['ratio'].append(ratio)
+        values['num_intervals'].append(len(intervals))
+        values['num_domains'].append(len(ivs))
+        [genes.add(x) for x in gene]
+        values['genes'].append(",".join(genes))
+        genes=set()
+    return values['domain'],values['pval'],values['ent'],values['tbl'],values['ratio'],values['num_intervals'],values['num_domains'],values['genes']
 
 def slider(iterable, grouper, metric, **kwargs):
     """
@@ -291,9 +301,68 @@ def example():
     for gene, val in slider(iterable, size_grouper(1), FRV_inline, maf_cutoff=0.005):
         print "%s\t%.3f\t%.3f" % (gene[0].autoregs, val, IAFI_inline(gene, 65000))
 
+def domlimit(domain, pval, ent):
+    label = []
+    x = []
+    y = []
+    for i in range(0,len(domain)):
+        if ent[i] < 0.4 and ent[i] > 0:
+            label.append(domain[i])
+            x.append(ent[i])
+            y.append(pval[i])
+        if pval[i] < 10 and pval[i] > 9.6 and ent[i] > 0.7:
+            label.append(domain[i])
+            x.append(ent[i])
+            y.append(pval[i])
+        if pval[i] < 0.05 and pval[i] > 0 and ent[i] > 0.8032 and ent[i] < 0.8035:
+            label.append(domain[i])
+            x.append(ent[i])
+            y.append(pval[i])
+    return label,x,y
 
 def example2():
-    runcontingent('/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz')
+    domain, pval, ent, tbl, ratio, num_intervals, num_domains, genes = runcontingent(sys.argv[1]) #'/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz'
+    import matplotlib.cm as cm
+    import matplotlib.pyplot as plt
+    import statsmodels.stats.multitest as smm
+    from math import log
+    adj_p = pval
+    #rej,adj_p=smm.multipletests(pval,method='bonferroni')[:2]
+    adj_p = [-log(y,10) for y in adj_p]
+    labels, x, y = domlimit(domain,adj_p,ent)
+    print "domain\tgenes\tburden_pval\ttable\tratio\tn_intervals\tn_domain\tn_genes\tentropy"
+    gd = []
+    s = []
+    for i in range(0,len(domain)):
+        num_genes = len(genes[i].split(","))
+        dom_muts = float(tbl[i].split(",")[1].split(":")[1].split("/")[0])
+        print "%s\t%s\t%.4g\t%s\t%.2f\t%d\t%d\t%d\t%.4f" % (domain[i], genes[i], adj_p[i], tbl[i], ratio[i], num_intervals[i], num_domains[i], num_genes, ent[i])
+        gd.append(log(num_genes,2))
+        s.append(log(dom_muts,10)*8)
+        
+    #matplotlib.use('Agg')
+    sc = plt.scatter(ent, adj_p, c = gd, s=s, edgecolors='none', cmap=cm.spectral)
+    plt.xlabel('Normalized Shannon entropy score')
+    plt.ylabel('Mutational burden (-log10 p-value)')
+    cb = plt.colorbar(sc, shrink = 0.5)
+    cb.set_label("log2 (number of genes in domain family)")
+    for label, x, y in zip(labels, x, y):
+        plt.annotate(
+            label, xy = (x,y), textcoords = 'offset points', xytext = (-20, 15),
+            alpha = 1, rotation = 45, position = (x,y), size = 'x-small',
+            weight = 'semibold')
+    l1 = plt.scatter([],[], s=log(10,10)*8, edgecolors='none')
+    l2 = plt.scatter([],[], s=log(100,10)*8, edgecolors='none')
+    l3 = plt.scatter([],[], s=log(1000,10)*8, edgecolors='none')
+    l4 = plt.scatter([],[], s=log(10000,10)*8, edgecolors='none')
+
+    labels = ["10", "100", "1000", "10000"]
+
+    leg = plt.legend([l1, l2, l3, l4], labels, ncol=1, frameon=False, fontsize=9,
+    handlelength=2, loc='center', bbox_to_anchor=(1.1,0.9), borderpad = 2,
+    handletextpad=1, title='number of mutations in domain', scatterpoints = 1)
+    plt.setp(leg.get_title(), fontsize = 'small')
+    plt.show()
 
 def example3():
     import toolshed as ts
@@ -320,4 +389,4 @@ if __name__ == "__main__":
     import sys
     print >>sys.stderr, (doctest.testmod())
 
-    example3()
+    example2()

@@ -39,8 +39,8 @@ def bytranscriptdist(grp, inext):
             or inext.start - grp[-1].end > 50
 
 def smallchunk(grp, inext):
-    return len(grp) > 20 or inext.transcript != grp[0].transcript \
-        or inext.start - grp[-1].end > 20
+    return len(grp) > 50 or inext.transcript != grp[0].transcript \
+        or inext.start - grp[-1].end > 30
 
 def rescale(vals):
     minv, maxv = min(vals), max(vals)
