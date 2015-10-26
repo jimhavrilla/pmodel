@@ -130,24 +130,20 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
     the values between pathogenic and non pathogenic variants?
     """
     from cyvcf2 import VCF
-
-    iterable = list(iterable)
+    from interlap import InterLap
 
     tbl = {True: [], False: []}
 
-    by_chrom = defaultdict(list)
+    by_chrom = defaultdict(InterLap)
     for it in iterable:
-        by_chrom[it[0][0].chrom].append(it)
-
+        by_chrom[it[0][0].chrom].add((it[0][0].start, it[0][-1].end, it[1]))
 
     for v in VCF(vcf_path):
         patho = is_pathogenic(v)
 
-        cvars = by_chrom[v.CHROM]
-        def chunkse(chunk):
-            return chunk[0].start, chunk[-1].end
-
-        vals = [it[1] for it in cvars if overlaps(chunkse(it[0]), v)]
+        tree = by_chrom[v.CHROM]
+        vals = [x[2] for x in tree.find((v.start, v.end))]
+        #vals = [it[1] for it in cvars if overlaps(chunkse(it[0]), v)]
         tbl[patho].extend(vals)
 
     return tbl
