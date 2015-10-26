@@ -54,7 +54,7 @@ def IAFI_inline(intervals, n_samples):
         region_len = interval.end - interval.start
         afs = map(float, (x if x != "." else min_af for x in interval.mafs.split(",")))
         afs.extend([min_af] * (region_len - len(afs)))
-        
+
         # NOTE that sometimes we have more AFs than we have bases in the region. need to figure out why.
         # for now, we just add the len(afs) to the toal region len
         assert len(afs) >= region_len, (len(afs), region_len, interval.start, interval.end)
@@ -431,14 +431,14 @@ def example3():
     maf_cutoff = 0.005
 
     for iv in windower(iterable, size_grouper(1)):
-        results['constraint'].append(constraint(iv, maf_cutoff=maf_cutoff))
-        results['iafi'].append(IAFI_inline(iv, n_samples=65000))
-        results['frv'].append(FRV_inline(iv, maf_cutoff=maf_cutoff))
+        results['constraint'].append((iv, constraint(iv, maf_cutoff=maf_cutoff)))
+        results['iafi'].append((iv, IAFI_inline(iv, n_samples=65000)))
+        results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
         # TODO: jim add a lot more metrics here... e.g.:
         # results['supermetric'].append(supermet(iv))
 
     fig, axes = plt.subplots(2)
-    for metric in results: 
+    for metric in results:
         print metric
         counts = evaldoms(results[metric], sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
         axes[0].hist(counts[True])
