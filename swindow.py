@@ -68,7 +68,7 @@ def FRV_inline(intervals, maf_cutoff):
     return s / n
 
 def constraint(intervals, maf_cutoff):
-    
+
     import re
     dn, ds, na = 0, 0, 0
     values = defaultdict(list)
@@ -215,6 +215,36 @@ def slider(iterable, grouper, metric, **kwargs):
     for chunk in windower(iterable, grouper):
         yield chunk, metric(chunk, **kwargs)
 
+def metrics(trues, falses):
+    from sklearn import metrics
+    import matplotlib
+    import seaborn as sns
+    from matplotlib import pyplot as plt
+    truth = ([1] * len(trues)) + ([0] * len(falses))
+
+    obs = trues + falses
+    dmetrics = {
+     'auc': metrics.roc_auc_score(truth, obs),
+     'precision': metrics.average_precision_score(truth, obs)
+    }
+
+    prec, rec, thresh = metrics.precision_recall_curve(truth, obs)
+    fig, axes = plt.subplots(2)
+    axes[0].plot(rec, prec)
+    axes[0].set_xlabel("recall")
+    axes[0].set_ylabel("precision")
+
+    fpr, tpr, thresh = metrics.roc_curve(truth, obs)
+    axes[1].plot(fpr, tpr, label="AUC: %.2f" % dmetrics['auc'])
+    axes[1].set_xlabel('1 - specificity (FPR)')
+    axes[1].set_ylabel('sensitivity (TPR)')
+    axes[1].plot([0, 1], [0, 1], ls='--')
+    axes[1].legend(loc="upper left")
+
+    plt.show()
+
+    return dmetrics
+
 def tfloat(n):
     try:
         return float(n)
@@ -353,7 +383,7 @@ def example2():
         print "%s\t%s\t%.4g\t%s\t%.2f\t%d\t%d\t%d\t%.4f" % (domain[i], genes[i], adj_p[i], tbl[i], ratio[i], num_intervals[i], num_domains[i], num_genes, ent[i])
         gd.append(log(num_genes,2))
         s.append(log(dom_muts,10)*10)
-        
+
     #matplotlib.use('Agg')
     sc = plt.scatter(ent, adj_p, c = gd, s=s, edgecolors='none', cmap=cm.spectral)
     plt.xlim((0,1.05))
