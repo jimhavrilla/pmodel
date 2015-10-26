@@ -40,19 +40,26 @@ def IAFI(intervals, n_samples):
     val = sum(1.0/max(iv.aaf, minaf) for iv in intervals)
     return log10(val / len(intervals))
 
+from math import log10
+
 def IAFI_inline(intervals, n_samples):
-    from math import log10
     total_region_len = 0
     min_af = 1.0 / (2 * n_samples + 1)
     val = 0
+
+    if hasattr(intervals, "start"):
+        intervals = [intervals]
 
     for interval in intervals:
         region_len = interval.end - interval.start
         afs = map(float, (x if x != "." else min_af for x in interval.mafs.split(",")))
         afs.extend([min_af] * (region_len - len(afs)))
-        assert len(afs) == region_len
+        
+        # NOTE that sometimes we have more AFs than we have bases in the region. need to figure out why.
+        # for now, we just add the len(afs) to the toal region len
+        assert len(afs) >= region_len, (len(afs), region_len, interval.start, interval.end)
         val += sum(1.0/af for af in afs)
-        total_region_len += region_len
+        total_region_len += len(afs)
     return val / total_region_len
 
 def FRV(intervals, maf_cutoff):
@@ -260,7 +267,7 @@ class Interval(object):
         self.__dict__.update(entries)
 
     def __repr__(self):
-        return "interval('%s@%s:%d-%d')" % (self.autoregs, self.chr, self.start, self.end)
+        return "Interval('%s@%s:%d-%d')" % (self.autoregs, self.chr, self.start, self.end)
 
     def __eq__(self, other):
         return self.__hash__() == other.__hash__()
@@ -420,19 +427,28 @@ def example3():
     it = ts.reader(sys.argv[1]) #'/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz'
     iterable = (Interval(**iv) for iv in it)
 
-    res = list(slider(iterable, size_grouper(1), constraint, maf_cutoff=0.005))
+    results = defaultdict(list)
+    maf_cutoff = 0.005
+
+    for iv in windower(iterable, size_grouper(1)):
+        results['constraint'].append(constraint(iv, maf_cutoff=maf_cutoff))
+        results['iafi'].append(IAFI_inline(iv, n_samples=65000))
+        results['frv'].append(FRV_inline(iv, maf_cutoff=maf_cutoff))
+        # TODO: jim add a lot more metrics here... e.g.:
+        # results['supermetric'].append(supermet(iv))
 
     fig, axes = plt.subplots(2)
-    counts = evaldoms(res, sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
-    axes[0].hist(counts[True])
-    axes[0].set_xlabel("pathogenic")
-    axes[1].hist(counts[False])
-    axes[1].set_xlabel("not-pathogenic")
-    plt.savefig('myfig')
-    with open('trues.txt', 'w') as fh:
-        fh.write("\n".join("%.3f" % v for v in counts[True]))
-    with open('falses.txt', 'w') as fh:
-        fh.write("\n".join("%.3f" % v for v in counts[False]))
+    for metric in results: 
+        print metric
+        counts = evaldoms(results[metric], sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
+        axes[0].hist(counts[True])
+        axes[0].set_xlabel("pathogenic")
+        axes[1].hist(counts[False])
+        axes[1].set_xlabel("not-pathogenic")
+        plt.savefig(metric)
+        plt.close()
+        print metrics(counts[True],counts[False])
+        plt.close()
 
 if __name__ == "__main__":
     import doctest
