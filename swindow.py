@@ -245,6 +245,7 @@ def metrics(trues, falses):
     axes[1].legend(loc="upper left")
 
     plt.show()
+    plt.close()
 
     return dmetrics
 
@@ -433,14 +434,15 @@ def example3():
         # TODO: jim add a lot more metrics here... e.g.:
         # results['supermetric'].append(supermet(iv))
 
-    fig, axes = plt.subplots(2)
     for metric in results:
         print metric
+        fig, axes = plt.subplots(2)
         counts = evaldoms(results[metric], sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
         axes[0].hist(counts[True])
         axes[0].set_xlabel("pathogenic")
         axes[1].hist(counts[False])
         axes[1].set_xlabel("not-pathogenic")
+        plt.show()
         plt.savefig(metric)
         plt.close()
         print metrics(counts[True],counts[False])
