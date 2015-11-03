@@ -75,8 +75,8 @@ def FRV_inline(intervals, maf_cutoff):
         s += sum(1.0 for af in afs if af <= maf_cutoff)
     return s / n
 
-def count_nons(intervals):
-    patt = re.compile(',|\|')
+def count_nons(intervals,
+               patt = re.compile(',|\|')):
     ds, l = 0.0, 0.0
     for iv in intervals:
         dnds = patt.split(iv.impacts)
@@ -84,18 +84,15 @@ def count_nons(intervals):
         l += iv.end - iv.start
     return ds / l
 
-def constraint(intervals, maf_cutoff):
+def constraint(intervals, maf_cutoff,
+               patt = re.compile(',|\|'):
 
     dn, ds, na = 0, 0, 0
     values = defaultdict(list)
-    patt = re.compile(',|\|')
     for iv in intervals:
-        #if iv.type is None:
-        #    continue
         dnds = patt.split(iv.impacts)
         dn += dnds.count('dn')
         ds += dnds.count('ds')
-        na += dnds.count('na')
     return float(dn) / (ds or 1)
 
 def contingent(intervals, domain_name, nodoms_only=False):
@@ -148,11 +145,19 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
     for it in iterable:
         by_chrom[it[0][0].chrom].add((it[0][0].start, it[0][-1].end, it[1]))
 
-    for v in VCF(vcf_path):
+    if vcf_path.endswith((".vcf", ".vcf.gz")):
+        viter = VCF(vcf_path)
+        pos = lambda v: (v.CHROM, v.start, v.end)
+    else:
+        viter = ts.reader(vcf_path)
+        pos = lambda v: (v.get('chrom', v['chr']), int(v['start']), int(v['end']))
+
+    for v in viter:
         patho = is_pathogenic(v)
 
-        tree = by_chrom[v.CHROM]
-        vals = [x[2] for x in tree.find((v.start, v.end))]
+        chrom, start, end = pos(v)
+        tree = by_chrom[chrom]
+        vals = [x[2] for x in tree.find((start, end))]
 
         if vals != []:
             #print patho, vals
@@ -444,7 +449,7 @@ def example3():
 
     for iv in windower(iterable, size_grouper(1)):
         results['constraint'].append((iv, constraint(iv, maf_cutoff=maf_cutoff)))
-        results['iafi'].append((iv, IAFI_inline(iv, n_samples=65000)))
+        results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
         results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
         results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
@@ -453,7 +458,10 @@ def example3():
     for metric in results:
         print metric
         fig, axes = plt.subplots(2)
-        counts = evaldoms(results[metric], sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
+        #counts = evaldoms(results[metric], sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
+        counts = evaldoms(results[metric],
+                "forweb_cleaned_exac_r03_march16_z_data_pLI.txt",
+                lambda d: float(d['pLI']) > 0.9)
 
         imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
         axes[0].hist(counts[True], bins=80)
