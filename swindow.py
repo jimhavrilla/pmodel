@@ -1,6 +1,7 @@
 import toolshed as ts
 from collections import namedtuple, defaultdict, Counter
 from operator import attrgetter
+import re
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
 
@@ -74,15 +75,24 @@ def FRV_inline(intervals, maf_cutoff):
         s += sum(1.0 for af in afs if af <= maf_cutoff)
     return s / n
 
+def count_nons(intervals):
+    patt = re.compile(',|\|')
+    ds, l = 0.0, 0.0
+    for iv in intervals:
+        dnds = patt.split(iv.impacts)
+        ds += dnds.count('ds')
+        l += iv.end - iv.start
+    return ds / l
+
 def constraint(intervals, maf_cutoff):
 
-    import re
     dn, ds, na = 0, 0, 0
     values = defaultdict(list)
+    patt = re.compile(',|\|')
     for iv in intervals:
-        if iv.type is None:
-            continue
-        dnds = re.split(',|\|',iv.type)
+        #if iv.type is None:
+        #    continue
+        dnds = patt.split(iv.impacts)
         dn += dnds.count('dn')
         ds += dnds.count('ds')
         na += dnds.count('na')
@@ -143,8 +153,11 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
 
         tree = by_chrom[v.CHROM]
         vals = [x[2] for x in tree.find((v.start, v.end))]
-        #vals = [it[1] for it in cvars if overlaps(chunkse(it[0]), v)]
-        tbl[patho].extend(vals)
+
+        if vals != []:
+            #print patho, vals
+            #vals = [it[1] for it in cvars if overlaps(chunkse(it[0]), v)]
+            tbl[patho].extend(vals)
 
     return tbl
 
@@ -218,7 +231,7 @@ def slider(iterable, grouper, metric, **kwargs):
     for chunk in windower(iterable, grouper):
         yield chunk, metric(chunk, **kwargs)
 
-def metrics(trues, falses):
+def metrics(trues, falses, figname=None):
     from sklearn import metrics
     import matplotlib
     import seaborn as sns
@@ -244,7 +257,7 @@ def metrics(trues, falses):
     axes[1].plot([0, 1], [0, 1], ls='--')
     axes[1].legend(loc="upper left")
 
-    plt.show()
+    plt.savefig(figname)
     plt.close()
 
     return dmetrics
@@ -419,7 +432,9 @@ def example3():
     import matplotlib
     matplotlib.use('Agg')
     from matplotlib import pyplot as plt
+    import seaborn as sns
     from scipy.stats import mannwhitneyu as mw
+    import numpy as np
 
     it = ts.reader(sys.argv[1]) #'/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz'
     iterable = (Interval(**iv) for iv in it)
@@ -431,6 +446,7 @@ def example3():
         results['constraint'].append((iv, constraint(iv, maf_cutoff=maf_cutoff)))
         results['iafi'].append((iv, IAFI_inline(iv, n_samples=65000)))
         results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
+        results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
         # results['supermetric'].append(supermet(iv))
 
@@ -438,14 +454,19 @@ def example3():
         print metric
         fig, axes = plt.subplots(2)
         counts = evaldoms(results[metric], sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
-        axes[0].hist(counts[True])
+
+        imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
+        axes[0].hist(counts[True], bins=80)
         axes[0].set_xlabel("pathogenic")
-        axes[1].hist(counts[False])
+        axes[0].set_xlim(imin, imax)
+        axes[1].hist(counts[False], bins=80)
         axes[1].set_xlabel("not-pathogenic")
+        axes[1].set_xlim(imin, imax)
         plt.show()
         plt.savefig(metric)
-        plt.close()
-        print metrics(counts[True],counts[False])
+        print metrics(counts[True], counts[False], metric + ".auc.png")
+        print mw(counts[True], counts[False])
+        del fig
         plt.close()
 
 if __name__ == "__main__":
