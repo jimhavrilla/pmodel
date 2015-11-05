@@ -88,7 +88,7 @@ def FRV_inline(intervals, maf_cutoff):
 
 def count_nons(intervals, patt = re.compile(',|\|')):
     dn, l = 0.0, 0.0
-    assert patt.split(intervals[0].type)[0] in set(['dn','ds','na'])
+    assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
     for iv in intervals:
         dnds = patt.split(iv.type)
         dn += dnds.count('dn')
@@ -98,7 +98,7 @@ def count_nons(intervals, patt = re.compile(',|\|')):
 
 def dnds_metric(intervals, maf_cutoff, patt = re.compile(',|\|')):
     dn, ds, na = 0, 0, 0
-    assert patt.split(intervals[0].type)[0] in set(['dn','ds','na'])
+    assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
     values = defaultdict(list)
     for iv in intervals:
         dnds = patt.split(iv.type)
