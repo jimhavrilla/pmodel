@@ -2,6 +2,7 @@ import toolshed as ts
 from collections import namedtuple, defaultdict, Counter
 from operator import attrgetter
 import re
+from pyfaidx import Fasta
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
 
@@ -34,9 +35,19 @@ def windower(iterable, grouper=size_grouper(20)):
             chunk.append(iv)
     yield chunk
 
+def CpG(intervals, fasta_file):
+    n, l = 0.0, 0.0
+    genes = Fasta(fasta_file)
+    for iv in intervals:
+        start = int(iv.start)
+        end = int(iv.end)
+        chrom = iv.chrom
+        seq = genes[chrom][start:end].seq
+        n += seq.count('CG')
+        l += end - start
+    return n*2.0/l
 
 def IAFI(intervals, n_samples):
-    from math import log10
     minaf = 1.0 / (2 * n_samples + 1)
     val = sum(1.0/max(iv.aaf, minaf) for iv in intervals)
     return log10(val / len(intervals))
@@ -75,25 +86,30 @@ def FRV_inline(intervals, maf_cutoff):
         s += sum(1.0 for af in afs if af <= maf_cutoff)
     return s / n
 
-def count_nons(intervals,
-               patt = re.compile(',|\|')):
-    ds, l = 0.0, 0.0
+def count_nons(intervals, patt = re.compile(',|\|')):
+    dn, l = 0.0, 0.0
     for iv in intervals:
-        dnds = patt.split(iv.impacts)
-        ds += dnds.count('ds')
+        dnds = patt.split(iv.type)
+        dn += dnds.count('dn')
         l += iv.end - iv.start
-    return ds / l
+    return float(dn) / l
 
-def constraint(intervals, maf_cutoff,
-               patt = re.compile(',|\|'):
 
+def dnds_metric(intervals, maf_cutoff, patt = re.compile(',|\|')):
     dn, ds, na = 0, 0, 0
     values = defaultdict(list)
     for iv in intervals:
-        dnds = patt.split(iv.impacts)
+        dnds = patt.split(iv.type)
         dn += dnds.count('dn')
         ds += dnds.count('ds')
     return float(dn) / (ds or 1)
+
+def constraint(intervals, maf_cutoff, fasta_file):
+    dnds = dnds_metric(intervals,maf_cutoff)
+    cpg = CpG(intervals,fasta_file)
+    IAFI = IAFI_inline(intervals,n_samples=61000)
+    constraint = float(1-cpg)*dnds
+    return constraint 
 
 def contingent(intervals, domain_name, nodoms_only=False):
     """
@@ -310,8 +326,8 @@ class Interval(object):
 
     @property
     def ftypes(self):
-        if self.impacts == ".": return [] #impacts and types are switched, should fix later
-        return self.impacts.split(",")
+        if self.type == ".": return [] #impacts and types are switched in ryans original file, fixed in mine and in code but need to make a note
+        return self.type.split(",")
 
     def split(self, include_empties=False):
         posns, mafs, types = [x - 1 for x in self.positions], self.fmafs, self.ftypes
@@ -448,19 +464,18 @@ def example3():
     maf_cutoff = 0.005
 
     for iv in windower(iterable, size_grouper(1)):
-        results['constraint'].append((iv, constraint(iv, maf_cutoff=maf_cutoff)))
+        results['constraint'].append((iv, constraint(iv, maf_cutoff=maf_cutoff, fasta_file = sys.argv[2])))
         results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
         results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
         results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-        # results['supermetric'].append(supermet(iv))
 
     for metric in results:
         print metric
         fig, axes = plt.subplots(2)
         #counts = evaldoms(results[metric], sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
         counts = evaldoms(results[metric],
-                "forweb_cleaned_exac_r03_march16_z_data_pLI.txt",
+                sys.argv[3],
                 lambda d: float(d['pLI']) > 0.9)
 
         imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
