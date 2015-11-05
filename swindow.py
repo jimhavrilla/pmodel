@@ -68,7 +68,7 @@ def IAFI_inline(intervals, n_samples):
         afs.extend([min_af] * (region_len - len(afs)))
 
         # NOTE that sometimes we have more AFs than we have bases in the region. need to figure out why.
-        # for now, we just add the len(afs) to the toal region len
+        # for now, we just add the len(afs) to the total region len
         assert len(afs) >= region_len, (len(afs), region_len, interval.start, interval.end)
         val += sum(1.0/af for af in afs)
         total_region_len += len(afs)
@@ -95,6 +95,16 @@ def count_nons(intervals, patt = re.compile(',|\|')):
         l += iv.end - iv.start
     return float(dn) / l
 
+def Density(intervals, patt = re.compile(',|\|')):
+    dn, ds, na, l = 0.0, 0.0, 0.0, 0.0
+    assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
+    for iv in intervals:
+        dnds = patt.split(iv.type)
+        dn += dnds.count('dn')
+        ds += dnds.count('ds')
+        na += dnds.count('na')
+        l += iv.end - iv.start
+    return float(dn+ds+na) / l
 
 def dnds_metric(intervals, maf_cutoff, patt = re.compile(',|\|')):
     dn, ds, na = 0, 0, 0
@@ -107,10 +117,12 @@ def dnds_metric(intervals, maf_cutoff, patt = re.compile(',|\|')):
     return float(dn) / (ds or 1)
 
 def constraint(intervals, maf_cutoff, fasta_file):
-    dnds = dnds_metric(intervals,maf_cutoff)
+    #dnds = dnds_metric(intervals,maf_cutoff)
     cpg = CpG(intervals,fasta_file)
-    IAFI = IAFI_inline(intervals,n_samples=61000)
-    constraint = float(1-cpg)*dnds
+    #iafi = IAFI_inline(intervals,n_samples=61000)
+    #dn_density = count_nons(intervals)
+    density = Density(intervals)
+    constraint = float(1-cpg)*density
     return constraint 
 
 def contingent(intervals, domain_name, nodoms_only=False):
@@ -467,8 +479,8 @@ def example3():
 
     for iv in windower(iterable, size_grouper(1)):
         results['constraint'].append((iv, constraint(iv, maf_cutoff=maf_cutoff, fasta_file = sys.argv[2])))
-        results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
-        results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
+       # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
+       # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
         results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
 
@@ -478,7 +490,7 @@ def example3():
         #counts = evaldoms(results[metric], sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
         counts = evaldoms(results[metric],
                 sys.argv[3],
-                lambda d: float(d['pLI']) > 0.9)
+                lambda d: float(d['pLI']) < 0.9)
 
         imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
         axes[0].hist(counts[True], bins=80)
