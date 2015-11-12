@@ -5,9 +5,17 @@ import re
 from pyfaidx import Fasta
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
+patt = re.compile(',|\|')
 
 def size_grouper(n):
     return lambda grp, inext: len(grp) >= n
+
+def frange(start, stop, step):
+    r = start
+    while (stop-r) > 1e-05: # allows a 1e-05 margin of error
+        r += step # I put step before, to have an right closed range, instead of a left closed range
+        yield float("%g" % r)
+
 
 def windower(iterable, grouper=size_grouper(20)):
     """
@@ -54,7 +62,7 @@ def IAFI(intervals, n_samples):
 
 from math import log10
 
-def IAFI_inline(intervals, n_samples):
+def IAFI_inline(intervals, n_samples, patt = patt):
     total_region_len = 0
     min_af = 1.0 / (2 * n_samples + 1)
     val = 0
@@ -64,7 +72,7 @@ def IAFI_inline(intervals, n_samples):
 
     for interval in intervals:
         region_len = interval.end - interval.start
-        afs = map(float, (x if x != "." else min_af for x in interval.mafs.split(",")))
+        afs = map(float, (x if x != "." else min_af for x in patt.split(interval.mafs)))
         afs.extend([min_af] * (region_len - len(afs)))
 
         # NOTE that sometimes we have more AFs than we have bases in the region. need to figure out why.
@@ -77,16 +85,16 @@ def IAFI_inline(intervals, n_samples):
 def FRV(intervals, maf_cutoff):
     return sum(1.0 for iv in intervals if iv.aaf <= maf_cutoff) / len(intervals)
 
-def FRV_inline(intervals, maf_cutoff):
+def FRV_inline(intervals, maf_cutoff, patt = patt):
 
     n, s = 0, 0
     for interval in intervals:
-        afs = map(float, (x if x != "." else 0 for x in interval.mafs.split(",")))
+        afs = map(float, (x if x != "." else 0 for x in patt.split(interval.mafs)))
         n += len(afs)
         s += sum(1.0 for af in afs if af <= maf_cutoff)
     return s / n
 
-def count_nons(intervals, patt = re.compile(',|\|')):
+def count_nons(intervals, patt = patt):
     dn, l = 0.0, 0.0
     assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
     for iv in intervals:
@@ -95,7 +103,7 @@ def count_nons(intervals, patt = re.compile(',|\|')):
         l += iv.end - iv.start
     return float(dn) / l
 
-def Density(intervals, patt = re.compile(',|\|')):
+def density(intervals, patt = patt):
     dn, ds, na, l = 0.0, 0.0, 0.0, 0.0
     assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
     for iv in intervals:
@@ -106,7 +114,7 @@ def Density(intervals, patt = re.compile(',|\|')):
         l += iv.end - iv.start
     return float(dn+ds+na) / l
 
-def dnds_metric(intervals, maf_cutoff, patt = re.compile(',|\|')):
+def dnds_metric(intervals, maf_cutoff, patt = patt):
     dn, ds, na = 0, 0, 0
     assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
     values = defaultdict(list)
@@ -117,12 +125,12 @@ def dnds_metric(intervals, maf_cutoff, patt = re.compile(',|\|')):
     return float(dn) / (ds or 1)
 
 def constraint(intervals, maf_cutoff, fasta_file):
-    #dnds = dnds_metric(intervals,maf_cutoff)
     cpg = CpG(intervals,fasta_file)
+    dnds = dnds_metric(intervals,maf_cutoff)
     #iafi = IAFI_inline(intervals,n_samples=61000)
     #dn_density = count_nons(intervals)
-    density = Density(intervals)
-    constraint = float(1-cpg)*density
+    dens = density(intervals)
+    constraint = dens*dnds#*float(1-cpg)
     return constraint 
 
 def contingent(intervals, domain_name, nodoms_only=False):
@@ -266,7 +274,7 @@ def slider(iterable, grouper, metric, **kwargs):
     for chunk in windower(iterable, grouper):
         yield chunk, metric(chunk, **kwargs)
 
-def metrics(trues, falses, figname=None):
+def metrics(trues, falses, figname=None, cutoff = "0-1"):
     from sklearn import metrics
     import matplotlib
     import seaborn as sns
@@ -281,18 +289,21 @@ def metrics(trues, falses, figname=None):
 
     prec, rec, thresh = metrics.precision_recall_curve(truth, obs)
     fig, axes = plt.subplots(2)
+    fig.tight_layout()
     axes[0].plot(rec, prec)
     axes[0].set_xlabel("recall")
     axes[0].set_ylabel("precision")
+    props = dict(boxstyle = 'round', facecolor = 'whitesmoke', alpha = 0.5)
+    axes[0].text(.875, .8, "CpG frac:\n" + cutoff.replace("-"," - "), transform = axes[0].transAxes, bbox = props)
 
     fpr, tpr, thresh = metrics.roc_curve(truth, obs)
     axes[1].plot(fpr, tpr, label="AUC: %.2f" % dmetrics['auc'])
     axes[1].set_xlabel('1 - specificity (FPR)')
     axes[1].set_ylabel('sensitivity (TPR)')
     axes[1].plot([0, 1], [0, 1], ls='--')
-    axes[1].legend(loc="upper left")
+    axes[1].legend(loc = "upper left")
 
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches = 'tight')
     plt.close()
 
     return dmetrics
@@ -474,37 +485,65 @@ def example3():
     it = ts.reader(sys.argv[1]) #'/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz'
     iterable = (Interval(**iv) for iv in it)
 
-    results = defaultdict(list)
+    results = defaultdict(lambda : defaultdict(list))
+    ms = defaultdict(list)
+    ff = sys.argv[2]
+    cpg_cutoff = {}
     maf_cutoff = 0.005
-
-    for iv in windower(iterable, size_grouper(1)):
-        results['constraint'].append((iv, constraint(iv, maf_cutoff=maf_cutoff, fasta_file = sys.argv[2])))
+    start = 0
+    end = .2
+    step = .025
+    j = start
+    for i in frange(start, end, step):
+        cpg_cutoff[str(j)+"-"+str(i)] = (j, i)
+        j = i
+    cpg_cutoff['0.2-1'] = (.2, 1)    
+    
+    for iv in windower(iterable, size_grouper(1)): 
+        ct = (iv, constraint(iv, maf_cutoff=maf_cutoff, fasta_file = ff), CpG(iv, fasta_file = ff))
+        ms['constraint'].append(ct)
        # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
-        results['count_nons'].append((iv, count_nons(iv)))
+       # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
 
-    for metric in results:
-        print metric
-        fig, axes = plt.subplots(2)
-        #counts = evaldoms(results[metric], sys.argv[2]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
-        counts = evaldoms(results[metric],
-                sys.argv[3],
-                lambda d: float(d['pLI']) < 0.9)
+    cutoffs = set()
 
-        imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
-        axes[0].hist(counts[True], bins=80)
-        axes[0].set_xlabel("pathogenic")
-        axes[0].set_xlim(imin, imax)
-        axes[1].hist(counts[False], bins=80)
-        axes[1].set_xlabel("not-pathogenic")
-        axes[1].set_xlim(imin, imax)
-        plt.show()
-        plt.savefig(metric)
-        print metrics(counts[True], counts[False], metric + ".auc.png")
-        print mw(counts[True], counts[False])
-        del fig
-        plt.close()
+    for cutoff in cpg_cutoff:
+        co = str(cpg_cutoff[cutoff][0])+'-'+str(cpg_cutoff[cutoff][1])
+        cutoffs.add(co)
+        for metric in ms:
+            for ct in ms[metric]:
+                if ct[2] >= cpg_cutoff[cutoff][0] and ct[2] <= cpg_cutoff[cutoff][1]:
+                    results[metric][co].append(ct)
+
+
+    for metric in results:
+        for cutoff in cutoffs:
+            print metric, cutoff
+            fig, axes = plt.subplots(2)
+            fig.tight_layout()
+            #counts = evaldoms(results[metric], sys.argv[3]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
+            counts = evaldoms(results[metric][cutoff],
+                    sys.argv[3], # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp
+                    lambda d: float(d['pLI']) < 0.9)
+
+            imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
+            axes[0].hist(counts[True], bins=80) #,label = cutoff)
+            axes[0].set_xlabel("pathogenic")
+            axes[0].set_xlim(imin, imax)
+            props = dict(boxstyle = 'round', facecolor = 'whitesmoke', alpha = 0.5)
+            axes[0].text(.875, .8, "CpG frac:\n" + cutoff.replace("-"," - "), transform = axes[0].transAxes, bbox = props)
+            #axes[0].legend(loc = 1, frameon = True)
+            axes[1].hist(counts[False], bins=80)
+            axes[1].set_xlabel("not-pathogenic")
+            axes[1].set_xlim(imin, imax)
+            plt.show()
+            plt.savefig(metric + cutoff + ".png", bbox_inches = 'tight')
+            print metrics(counts[True], counts[False], metric + cutoff + ".auc.png", cutoff = cutoff)
+            print mw(counts[True], counts[False])
+            del fig
+            plt.close()
 
 if __name__ == "__main__":
     import doctest
