@@ -49,6 +49,7 @@ def windower(iterable, grouper=size_grouper(20)):
     yield chunk
 
 def baseline(intervallist, maf_cutoff = 1e-06):
+    l = 0.0
     for intervals in intervallist:
         for iv in intervals:
             l += iv.end - iv.start
@@ -118,7 +119,7 @@ def count_nons(intervals, patt = patt):
         l += iv.end - iv.start
     return float(dn) / l
 
-def density(intervals, patt = patt):
+def dnds_density(intervals, maf_cutoff, patt = patt):
     dn, ds, na, l = 0.0, 0.0, 0.0, 0.0
     assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
     for iv in intervals:
@@ -127,25 +128,15 @@ def density(intervals, patt = patt):
         ds += dnds.count('ds')
         na += dnds.count('na')
         l += iv.end - iv.start
-    return float(dn+ds+na) / l
+    return float(dn) / (ds or 1), float(dn+ds+na) / l
 
-def dnds_metric(intervals, maf_cutoff, patt = patt):
-    dn, ds, na = 0, 0, 0
-    assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
-    values = defaultdict(list)
-    for iv in intervals:
-        dnds = patt.split(iv.type)
-        dn += dnds.count('dn')
-        ds += dnds.count('ds')
-    return float(dn) / (ds or 1)
 
 def constraint(intervals, maf_cutoff, genes):
-    cpg = CpG(intervals, genes)
-    dnds = dnds_metric(intervals, maf_cutoff)
+    #cpg = CpG(intervals, genes)
+    dnds, density = dnds_density(intervals, maf_cutoff)
     #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
-    dens = density(intervals)
-    constraint = dens*dnds#*float(1-cpg)
+    constraint = density*dnds#*float(1-cpg)
     return constraint 
 
 def contingent(intervals, domain_name, nodoms_only=False):
@@ -374,13 +365,19 @@ class Interval(object):
         posns, mafs, types = [x - 1 for x in self.positions], self.fmafs, self.ftypes
         if include_empties:
             starts, ends = self.istarts, self.iends
+            sposns = set(posns)
             for s, e in zip(starts, ends):
+                diff = set(range(s, e)) - sposns
+                posns.extend(sorted(diff))
+                mafs.extend([0.0] * len(diff))
+                types.extend([None] * len(diff))
+                """
                 for ip in range(s, e):
                     if not ip in posns:
-                        posns.append(ip)
+                        posns.add(ip)
                         mafs.append(0.0)
                         types.append(None)
-
+                """
         pms = sorted(zip(posns, mafs, types))
 
         for p, maf, dntype in pms:
@@ -518,8 +515,13 @@ def example3():
     
     ivlist = []
     genes = Fasta(ff)
-    for iv in windower(iterator, byregiondist): # iterable, size_grouper(1)
-        ct = (iv, constraint(iv, maf_cutoff = maf_cutoff, genes = genes), CpG(iv, genes = genes))
+    for i, iv in enumerate(windower(iterator, byregiondist), 1): # iterable, size_grouper(1)
+        if i % 200 == 0:
+            print iv[0].start,iv[-1].end
+        ct = (iv, 
+               constraint(iv, maf_cutoff = maf_cutoff, genes = genes),
+               CpG(iv, genes = genes)
+              )
         ms['constraint'].append(ct)
         ivlist.append(iv)
        # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
@@ -527,7 +529,9 @@ def example3():
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
 
+    print "DONE"
     base = baseline(ivlist)
+    print "DONE baseline"
     cutoffs = set()
 
     for cutoff in cpg_cutoff:
