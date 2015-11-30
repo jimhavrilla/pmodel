@@ -10,6 +10,11 @@ patt = re.compile(',|\|')
 def size_grouper(n):
     return lambda grp, inext: len(grp) >= n
 
+def byregiondist(grp, inext):
+    """ group by region and split at gaps > 50 bases"""
+    return inext.autoregs != grp[0].autoregs \
+            or inext.start - grp[-1].end > 50
+
 def frange(start, stop, step):
     r = start
     while (stop-r) > 1e-05: # allows a 1e-05 margin of error
@@ -43,9 +48,19 @@ def windower(iterable, grouper=size_grouper(20)):
             chunk.append(iv)
     yield chunk
 
-def CpG(intervals, fasta_file):
+def baseline(intervallist, maf_cutoff = 1e-06):
+    for intervals in intervallist:
+        for iv in intervals:
+            l += iv.end - iv.start
+            print iv.mafs
+    return 
+
+def upton(intervals, maf_cutoff = 1e-06):
+
+    return
+
+def CpG(intervals, genes):
     n, l = 0.0, 0.0
-    genes = Fasta(fasta_file)
     for iv in intervals:
         start = int(iv.start)
         end = int(iv.end)
@@ -124,10 +139,10 @@ def dnds_metric(intervals, maf_cutoff, patt = patt):
         ds += dnds.count('ds')
     return float(dn) / (ds or 1)
 
-def constraint(intervals, maf_cutoff, fasta_file):
-    cpg = CpG(intervals,fasta_file)
-    dnds = dnds_metric(intervals,maf_cutoff)
-    #iafi = IAFI_inline(intervals,n_samples=61000)
+def constraint(intervals, maf_cutoff, genes):
+    cpg = CpG(intervals, genes)
+    dnds = dnds_metric(intervals, maf_cutoff)
+    #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
     dens = density(intervals)
     constraint = dens*dnds#*float(1-cpg)
@@ -483,8 +498,9 @@ def example3():
     from scipy.stats import mannwhitneyu as mw
     import numpy as np
 
-    it = ts.reader(sys.argv[1]) #'/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz'
-    iterable = (Interval(**iv) for iv in it)
+    iterator = JimFile(sys.argv[1])
+    #it = ts.reader(sys.argv[1]) #'/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz'
+    #iterable = (Interval(**iv) for iv in it)
 
     results = defaultdict(lambda : defaultdict(list))
     ms = defaultdict(list)
@@ -495,19 +511,23 @@ def example3():
     end = .2
     step = .025
     j = start
-    for i in frange(start, end, step):
-        cpg_cutoff[str(j)+"-"+str(i)] = (j, i)
-        j = i
+    #for i in frange(start, end, step):
+    #    cpg_cutoff[str(j)+"-"+str(i)] = (j, i)
+    #    j = i
     cpg_cutoff['0.2-1'] = (.2, 1)    
     
-    for iv in windower(iterable, size_grouper(1)): 
-        ct = (iv, constraint(iv, maf_cutoff=maf_cutoff, fasta_file = ff), CpG(iv, fasta_file = ff))
+    ivlist = []
+    genes = Fasta(ff)
+    for iv in windower(iterator, byregiondist): # iterable, size_grouper(1)
+        ct = (iv, constraint(iv, maf_cutoff = maf_cutoff, genes = genes), CpG(iv, genes = genes))
         ms['constraint'].append(ct)
+        ivlist.append(iv)
        # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
 
+    base = baseline(ivlist)
     cutoffs = set()
 
     for cutoff in cpg_cutoff:
@@ -528,7 +548,7 @@ def example3():
             counts = evaldoms(results[metric][cutoff],
                     sys.argv[3], # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp
                     lambda d: float(d['pLI']) < 0.9)
-
+            print counts
             imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
             axes[0].hist(counts[True], bins=80) #,label = cutoff)
             axes[0].set_xlabel("pathogenic")
