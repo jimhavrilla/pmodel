@@ -48,15 +48,15 @@ def windower(iterable, grouper=size_grouper(20)):
             chunk.append(iv)
     yield chunk
 
-def baseline(intervallist, maf_cutoff = 1e-06):
-    l = 0.0
-    for intervals in intervallist:
-        for iv in intervals:
-            l += iv.end - iv.start
-            print iv.mafs
-    return 
+def baseline(intervals, maf_cutoff = 1e-05):
+    ct, l = 0.0, 0.0
+    for iv in intervals:
+        l += iv.end - iv.start
+        if float(iv.mafs) <= maf_cutoff:
+            ct += 1
+    return intervals[0].chrom, intervals[0].start, intervals[-1].end, ct/l
 
-def upton(intervals, maf_cutoff = 1e-06):
+def upton(intervals, maf_cutoff = 1e-05):
 
     return
 
@@ -98,7 +98,7 @@ def IAFI_inline(intervals, n_samples, patt = patt):
         total_region_len += len(afs)
     return val / total_region_len
 
-def FRV(intervals, maf_cutoff):
+def FRV(intervals, maf_cutoff): # default cutoff is 0.005
     return sum(1.0 for iv in intervals if iv.aaf <= maf_cutoff) / len(intervals)
 
 def FRV_inline(intervals, maf_cutoff, patt = patt):
@@ -134,9 +134,10 @@ def dnds_density(intervals, maf_cutoff, patt = patt):
 def constraint(intervals, maf_cutoff, genes):
     #cpg = CpG(intervals, genes)
     dnds, density = dnds_density(intervals, maf_cutoff)
+    base = baseline(intervals, maf_cutoff)[2]
     #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
-    constraint = density*dnds#*float(1-cpg)
+    constraint = density*dnds*base#*float(1-cpg)
     return constraint 
 
 def contingent(intervals, domain_name, nodoms_only=False):
@@ -503,7 +504,7 @@ def example3():
     ms = defaultdict(list)
     ff = sys.argv[2]
     cpg_cutoff = {}
-    maf_cutoff = 0.005
+    maf_cutoff = 1e-05
     start = 0
     end = .2
     step = .025
@@ -511,29 +512,35 @@ def example3():
     #for i in frange(start, end, step):
     #    cpg_cutoff[str(j)+"-"+str(i)] = (j, i)
     #    j = i
-    cpg_cutoff['0.2-1'] = (.2, 1)    
-    
-    ivlist = []
+    #cpg_cutoff['0.2-1'] = (.2, 1)    
+    cpg_cutoff['0-1'] = (0, 1)    
+
+    base = []
     genes = Fasta(ff)
     for i, iv in enumerate(windower(iterator, byregiondist), 1): # iterable, size_grouper(1)
-        if i % 200 == 0:
-            print iv[0].start,iv[-1].end
+        cpg = CpG(iv, genes = genes)
+        b = baseline(iv, maf_cutoff = maf_cutoff)
+        cons = constraint(iv, maf_cutoff = maf_cutoff, genes = genes)
         ct = (iv, 
-               constraint(iv, maf_cutoff = maf_cutoff, genes = genes),
-               CpG(iv, genes = genes)
-              )
+               cons,
+               cpg)
         ms['constraint'].append(ct)
-        ivlist.append(iv)
+        ct = (iv,
+                b,
+                cpg)
+        ms['baseline'].append((ct[0],ct[1][2],ct[2]))
+        base.append(b)
        # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-
-    print "DONE"
-    base = baseline(ivlist)
-    print "DONE baseline"
+    
+    f2 = open("baseline.bed","w")
+    for b in base:
+        f2.write("\t".join(map(str,b))+"\n")
+    f2.close()
+    
     cutoffs = set()
-
     for cutoff in cpg_cutoff:
         co = str(cpg_cutoff[cutoff][0])+'-'+str(cpg_cutoff[cutoff][1])
         cutoffs.add(co)
@@ -552,7 +559,6 @@ def example3():
             counts = evaldoms(results[metric][cutoff],
                     sys.argv[3], # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp
                     lambda d: float(d['pLI']) < 0.9)
-            print counts
             imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
             axes[0].hist(counts[True], bins=80) #,label = cutoff)
             axes[0].set_xlabel("pathogenic")
