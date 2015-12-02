@@ -528,7 +528,7 @@ def example3():
         ct = (iv,
                 b,
                 cpg)
-        ms['baseline'].append((ct[0],ct[1][2],ct[2]))
+        ms['baseline'].append((ct[0],ct[1][3],ct[2]))
         base.append(b)
        # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
