@@ -524,6 +524,8 @@ def example3():
         ct = (iv, 
                c,
                cpg)
+        if c != 0:
+            ms['nzconstraint'].append(ct)    
         ms['constraint'].append(ct)
         ct = (iv,
                 b,
