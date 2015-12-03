@@ -121,7 +121,7 @@ def count_nons(intervals, patt = patt):
 
 def dnds_density(intervals, maf_cutoff, patt = patt):
     dn, ds, na, l = 0.0, 0.0, 0.0, 0.0
-    assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
+    assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type)) 
     for iv in intervals:
         dnds = patt.split(iv.type)
         dn += dnds.count('dn')
@@ -129,7 +129,6 @@ def dnds_density(intervals, maf_cutoff, patt = patt):
         na += dnds.count('na')
         l += iv.end - iv.start
     return float(dn) / (ds or 1), float(dn+ds+na) / l
-
 
 def constraint(intervals, maf_cutoff, genes):
     #cpg = CpG(intervals, genes)
@@ -371,7 +370,7 @@ class Interval(object):
                 diff = set(range(s, e)) - sposns
                 posns.extend(sorted(diff))
                 mafs.extend([0.0] * len(diff))
-                types.extend([None] * len(diff))
+                types.extend(['.'] * len(diff))
                 """
                 for ip in range(s, e):
                     if not ip in posns:
@@ -387,7 +386,7 @@ class Interval(object):
             I.end = p + 1
             I.__dict__['mafs'] = str(maf)
             I.__dict__['pos'] = str(p + 1)
-            I.__dict__['dnds'] = dntype
+            I.__dict__['type'] = dntype
             I.aaf = maf
             yield I
 
