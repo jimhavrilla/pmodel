@@ -134,7 +134,7 @@ def dnds_density(intervals, maf_cutoff, patt = patt):
 def constraint(intervals, maf_cutoff, genes):
     #cpg = CpG(intervals, genes)
     dnds, density = dnds_density(intervals, maf_cutoff)
-    base = baseline(intervals, maf_cutoff)[2]
+    base = baseline(intervals, maf_cutoff)[3]
     #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
     constraint = density*dnds*base#*float(1-cpg)
