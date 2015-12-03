@@ -531,7 +531,7 @@ def example3():
                 cpg)
         ms['baseline'].append((ct[0],ct[1][3],ct[2]))
         base.append(b)
-        cons.append(c)
+        cons.append((b[0],b[1],b[2],c))
        # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
