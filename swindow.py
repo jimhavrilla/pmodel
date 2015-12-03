@@ -516,13 +516,14 @@ def example3():
     cpg_cutoff['0-1'] = (0, 1)    
 
     base = []
+    cons = []
     genes = Fasta(ff)
     for i, iv in enumerate(windower(iterator, byregiondist), 1): # iterable, size_grouper(1)
         cpg = CpG(iv, genes = genes)
         b = baseline(iv, maf_cutoff = maf_cutoff)
-        cons = constraint(iv, maf_cutoff = maf_cutoff, genes = genes)
+        c = constraint(iv, maf_cutoff = maf_cutoff, genes = genes)
         ct = (iv, 
-               cons,
+               c,
                cpg)
         ms['constraint'].append(ct)
         ct = (iv,
@@ -530,14 +531,17 @@ def example3():
                 cpg)
         ms['baseline'].append((ct[0],ct[1][3],ct[2]))
         base.append(b)
+        cons.append(c)
        # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-    
+    f1 = open("constraint.bed","w")
     f2 = open("baseline.bed","w")
-    for b in base:
+    for b,c in zip(base,cons):
+        f1.write("\t".join(map(str,c))+"\n")
         f2.write("\t".join(map(str,b))+"\n")
+    f1.close()
     f2.close()
     
     cutoffs = set()
