@@ -503,7 +503,7 @@ def example3():
     ms = defaultdict(list)
     ff = sys.argv[2]
     cpg_cutoff = {}
-    maf_cutoff = 1e-05
+    maf_cutoff = sys.argv[4] if len(sys.argv) > 5 else 1e-05
     start = 0
     end = .2
     step = .025
