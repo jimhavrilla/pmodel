@@ -3,6 +3,7 @@ from collections import namedtuple, defaultdict, Counter
 from operator import attrgetter
 import re
 from pyfaidx import Fasta
+from precision import remove_trailing_zeros as rtz
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
 patt = re.compile(',|\|')
@@ -537,8 +538,8 @@ def example3():
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-    f1 = open("constraint."+ '{:.0e}'.format(maf_cutoff) +".bed","w")
-    f2 = open("baseline."+ '{:.0e}'.format(maf_cutoff) +".bed","w")
+    f1 = open("constraint."+ rtz(maf_cutoff) +".bed","w")
+    f2 = open("baseline."+ rtz(maf_cutoff) +".bed","w")
     for b,c in zip(base,cons):
         f1.write("\t".join(map(str,c))+"\n")
         f2.write("\t".join(map(str,b))+"\n")
@@ -575,8 +576,8 @@ def example3():
             axes[1].set_xlabel("not-pathogenic")
             axes[1].set_xlim(imin, imax)
             plt.show()
-            plt.savefig(metric + cutoff + "." + '{:.0e}'.format(maf_cutoff) + ".png", bbox_inches = 'tight')
-            print metrics(counts[True], counts[False], metric + cutoff + "." + '{:.0e}'.format(maf_cutoff) + ".auc.png", cutoff = cutoff)
+            plt.savefig(metric + cutoff + "." + rtz(maf_cutoff) + ".png", bbox_inches = 'tight')
+            print metrics(counts[True], counts[False], metric + cutoff + "." + rtz(maf_cutoff) + ".auc.png", cutoff = cutoff)
             print mw(counts[True], counts[False])
             del fig
             plt.close()
