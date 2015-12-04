@@ -136,7 +136,7 @@ def constraint(intervals, maf_cutoff, genes):
     base = baseline(intervals, maf_cutoff)[3]
     #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
-    constraint = density*dnds*(1/base)#*float(1-cpg)
+    constraint = density*dnds*base#*float(1-cpg)
     return constraint 
 
 def contingent(intervals, domain_name, nodoms_only=False):
