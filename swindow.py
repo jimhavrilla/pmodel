@@ -136,7 +136,7 @@ def constraint(intervals, maf_cutoff, genes):
     base = baseline(intervals, maf_cutoff)[3]
     #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
-    constraint = density*dnds*base#*float(1-cpg)
+    constraint = density*dnds*(1/base)#*float(1-cpg)
     return constraint 
 
 def contingent(intervals, domain_name, nodoms_only=False):
@@ -503,7 +503,7 @@ def example3():
     ms = defaultdict(list)
     ff = sys.argv[2]
     cpg_cutoff = {}
-    maf_cutoff = sys.argv[4] if len(sys.argv) > 5 else 1e-05
+    maf_cutoff = float(sys.argv[4]) if len(sys.argv) > 4 else 1e-05
     start = 0
     end = .2
     step = .025
@@ -537,8 +537,8 @@ def example3():
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-    f1 = open("constraint.bed","w")
-    f2 = open("baseline.bed","w")
+    f1 = open("constraint."+ '{:.0e}'.format(maf_cutoff) +".bed","w")
+    f2 = open("baseline."+ '{:.0e}'.format(maf_cutoff) +".bed","w")
     for b,c in zip(base,cons):
         f1.write("\t".join(map(str,c))+"\n")
         f2.write("\t".join(map(str,b))+"\n")
@@ -575,8 +575,8 @@ def example3():
             axes[1].set_xlabel("not-pathogenic")
             axes[1].set_xlim(imin, imax)
             plt.show()
-            plt.savefig(metric + cutoff + ".png", bbox_inches = 'tight')
-            print metrics(counts[True], counts[False], metric + cutoff + ".auc.png", cutoff = cutoff)
+            plt.savefig(metric + cutoff + "." + '{:.0e}'.format(maf_cutoff) + ".png", bbox_inches = 'tight')
+            print metrics(counts[True], counts[False], metric + cutoff + "." + '{:.0e}'.format(maf_cutoff) + ".auc.png", cutoff = cutoff)
             print mw(counts[True], counts[False])
             del fig
             plt.close()
