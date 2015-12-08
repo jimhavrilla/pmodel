@@ -55,11 +55,11 @@ def baseline(intervals, maf_cutoff = 1e-05):
         l += iv.end - iv.start
         if float(iv.mafs) <= maf_cutoff:
             ct += 1
-    return intervals[0].chrom, intervals[0].start, intervals[-1].end, ct/l
+    return intervals[0].chrom, intervals[0].start, intervals[-1].end, ct, l # change column indices nigga
 
-def upton(intervals, maf_cutoff = 1e-05):
-
-    return
+def upton(base, baserate, maf_cutoff = 1e-05):
+    upton = (base[0], base[1], base[2], base[3] / (base[4] * baserate)) 
+    return upton
 
 def CpG(intervals, genes):
     n, l = 0.0, 0.0
@@ -131,13 +131,14 @@ def dnds_density(intervals, maf_cutoff, patt = patt):
         l += iv.end - iv.start
     return float(dn) / (ds or 1), float(dn+ds+na) / l
 
-def constraint(intervals, maf_cutoff, genes):
+def constraint(intervals, maf_cutoff, genes, upton):
     #cpg = CpG(intervals, genes)
+    upton = upton[3]
     dnds, density = dnds_density(intervals, maf_cutoff)
-    base = baseline(intervals, maf_cutoff)[3]
+    #base = baseline(intervals, maf_cutoff)[3]
     #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
-    constraint = density*dnds*base#*float(1-cpg)
+    constraint = density*dnds*upton#*float(1-cpg)
     return constraint 
 
 def contingent(intervals, domain_name, nodoms_only=False):
@@ -518,10 +519,22 @@ def example3():
     base = []
     cons = []
     genes = Fasta(ff)
-    for i, iv in enumerate(windower(iterator, byregiondist), 1): # iterable, size_grouper(1)
+    y = list(windower(iterator, byregiondist))
+    for iv in y: # iterable, size_grouper(1)
         cpg = CpG(iv, genes = genes)
         b = baseline(iv, maf_cutoff = maf_cutoff)
-        c = constraint(iv, maf_cutoff = maf_cutoff, genes = genes)
+        base.append(b)
+    count = 0.0
+    totlen = 0.0
+    for x in b:
+        count += b[3]
+        totlen += b[4]
+    baserate = count/totlen
+    un = []
+    for b in base:
+        un.append(upton(b, baserate, maf_cutoff = maf_cutoff))
+    for iv, u in zip(y, un):
+        c = constraint(iv, maf_cutoff = maf_cutoff, genes = genes, upton = u)
         ct = (iv, 
                c,
                cpg)
@@ -529,11 +542,10 @@ def example3():
             ms['nzconstraint'].append(ct)    
         ms['constraint'].append(ct)
         ct = (iv,
-                b,
+                u,
                 cpg)
-        ms['baseline'].append((ct[0],ct[1][3],ct[2]))
-        base.append(b)
-        cons.append((b[0],b[1],b[2],c))
+        ms['upton'].append((ct[0],ct[1][3],ct[2]))
+        cons.append((u[0],u[1],u[2],c))
        # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
