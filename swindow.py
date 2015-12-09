@@ -177,7 +177,7 @@ def overlaps(a, b):
     return a[0] < b.end and a[1] > b.start
 
 def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
-                                                v.INFO.get("CLNSIG", 0) in "45"):
+                                                [x in "45" for x in re.split(patt,v.INFO.get("CLNSIG"))][0]):
     """
     given a some chunks with a metric applied, do we see a difference in
     the values between pathogenic and non pathogenic variants?
@@ -523,6 +523,7 @@ def example3():
     for iv in y: # iterable, size_grouper(1)
         cpg = CpG(iv, genes = genes)
         b = baseline(iv, maf_cutoff = maf_cutoff)
+        ms['baseline'].append((iv,b[3]/b[4],cpg))
         base.append(b)
     count = 0.0
     totlen = 0.0
@@ -567,7 +568,6 @@ def example3():
                 if ct[2] >= cpg_cutoff[cutoff][0] and ct[2] <= cpg_cutoff[cutoff][1]:
                     results[metric][co].append(ct)
 
-
     for metric in results:
         for cutoff in cutoffs:
             print metric, cutoff
@@ -575,8 +575,8 @@ def example3():
             fig.tight_layout()
             #counts = evaldoms(results[metric], sys.argv[3]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
             counts = evaldoms(results[metric][cutoff],
-                    sys.argv[3], # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp
-                    lambda d: float(d['pLI']) < 0.9)
+                    sys.argv[3]) # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp
+                    #lambda d: float(d['pLI']) < 0.9)
             imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
             axes[0].hist(counts[True], bins=80) #,label = cutoff)
             axes[0].set_xlabel("pathogenic")
