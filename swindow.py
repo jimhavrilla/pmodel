@@ -575,8 +575,8 @@ def example3():
             fig.tight_layout()
             #counts = evaldoms(results[metric], sys.argv[3]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
             counts = evaldoms(results[metric][cutoff],
-                    sys.argv[3]) # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp
-                    #lambda d: float(d['pLI']) < 0.9)
+                    sys.argv[3], # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp
+                    lambda d: float(d['pLI']) < 0.9)
             imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
             axes[0].hist(counts[True], bins=80) #,label = cutoff)
             axes[0].set_xlabel("pathogenic")
