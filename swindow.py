@@ -54,7 +54,9 @@ def baseline(intervals, maf_cutoff = 1e-05):
     for iv in intervals:
         l += iv.end - iv.start
         if float(iv.mafs) <= maf_cutoff:
-            ct += 1
+            dnds = patt.split(iv.type)
+            if not dnds.count('ds'):
+                ct += 1
     return intervals[0].chrom, intervals[0].start, intervals[-1].end, ct, l # change column indices nigga
 
 def upton(base, baserate, maf_cutoff = 1e-05):
@@ -138,7 +140,8 @@ def constraint(intervals, maf_cutoff, genes, upton):
     #base = baseline(intervals, maf_cutoff)[3]
     #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
-    constraint = density*dnds*upton#*float(1-cpg)
+    constraint = density*dnds*(1-upton)#*float(1-cpg)
+
     return constraint 
 
 def contingent(intervals, domain_name, nodoms_only=False):
@@ -488,6 +491,12 @@ def example2():
     plt.setp(leg.get_title(), fontsize = 'small')
     plt.show()
 
+def clinvar(v):
+    return [x in "45" for x in re.split(patt,v.INFO.get("CLNSIG"))][0]
+    
+def pli(v):
+    return float(v['pLI']) < 0.9
+
 def example3():
     import toolshed as ts
     import matplotlib
@@ -567,7 +576,12 @@ def example3():
             for ct in ms[metric]:
                 if ct[2] >= cpg_cutoff[cutoff][0] and ct[2] <= cpg_cutoff[cutoff][1]:
                     results[metric][co].append(ct)
-
+    
+    option = sys.argv[5]
+    if option == "clinvar" or option == "c":
+        func = clinvar
+    if option == "pli" or option == "p":
+        func = pli
     for metric in results:
         for cutoff in cutoffs:
             print metric, cutoff
@@ -576,7 +590,7 @@ def example3():
             #counts = evaldoms(results[metric], sys.argv[3]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
             counts = evaldoms(results[metric][cutoff],
                     sys.argv[3], # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp
-                    lambda d: float(d['pLI']) < 0.9)
+                    func)
             imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
             axes[0].hist(counts[True], bins=80) #,label = cutoff)
             axes[0].set_xlabel("pathogenic")
