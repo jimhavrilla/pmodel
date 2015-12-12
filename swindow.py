@@ -545,6 +545,8 @@ def example3():
     exclude = None
     if args.exclude:
         exclude = args.exclude
+    if exclude == None:
+        ex = ""
     for iv in y: # iterable, size_grouper(1)
         cpg = CpG(iv, genes = genes)
         b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude)
@@ -576,8 +578,8 @@ def example3():
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-    f1 = open("constraint."+ rtz(maf_cutoff) + ".ex" + exclude + ".bed","w")
-    f2 = open("baseline."+ rtz(maf_cutoff) + ".ex" + exclude + ".bed","w")
+    f1 = open("constraint."+ rtz(maf_cutoff) + ".ex" + ex + ".bed","w")
+    f2 = open("baseline."+ rtz(maf_cutoff) + ".ex" + ex + ".bed","w")
     for b,c in zip(base,cons):
         f1.write("\t".join(map(str,c))+"\n")
         f2.write("\t".join(map(str,b))+"\n")
@@ -619,8 +621,6 @@ def example3():
             axes[1].set_xlabel("not-pathogenic")
             axes[1].set_xlim(imin, imax)
             plt.show()
-            if exclude == None:
-                ex = ""
             plt.savefig(metric + "." + trusrc + "ex" + ex + "." + cutoff + "." + rtz(maf_cutoff) + ".png", bbox_inches = 'tight')
             print metrics(counts[True], counts[False], metric + "." + trusrc + "ex" + ex + "." + cutoff + "." + rtz(maf_cutoff) + ".auc.png", cutoff = cutoff)
             print mw(counts[True], counts[False])
