@@ -576,8 +576,8 @@ def example3():
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-    f1 = open("constraint."+ rtz(maf_cutoff) +".bed","w")
-    f2 = open("baseline."+ rtz(maf_cutoff) +".bed","w")
+    f1 = open("constraint."+ rtz(maf_cutoff) + ".ex" + exclude + ".bed","w")
+    f2 = open("baseline."+ rtz(maf_cutoff) + ".ex" + exclude + ".bed","w")
     for b,c in zip(base,cons):
         f1.write("\t".join(map(str,c))+"\n")
         f2.write("\t".join(map(str,b))+"\n")
