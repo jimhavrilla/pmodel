@@ -619,8 +619,10 @@ def example3():
             axes[1].set_xlabel("not-pathogenic")
             axes[1].set_xlim(imin, imax)
             plt.show()
-            plt.savefig(metric + "." + trusrc + "." + cutoff + "." + rtz(maf_cutoff) + ".png", bbox_inches = 'tight')
-            print metrics(counts[True], counts[False], metric + "." + trusrc + "." + cutoff + "." + rtz(maf_cutoff) + ".auc.png", cutoff = cutoff)
+            if exclude == None:
+                ex = ""
+            plt.savefig(metric + "." + trusrc + "ex" + ex + "." + cutoff + "." + rtz(maf_cutoff) + ".png", bbox_inches = 'tight')
+            print metrics(counts[True], counts[False], metric + "." + trusrc + "ex" + ex + "." + cutoff + "." + rtz(maf_cutoff) + ".auc.png", cutoff = cutoff)
             print mw(counts[True], counts[False])
             del fig
             plt.close()
