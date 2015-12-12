@@ -547,6 +547,8 @@ def example3():
         exclude = args.exclude
     if exclude == None:
         ex = ""
+    else:
+        ex = exclude
     for iv in y: # iterable, size_grouper(1)
         cpg = CpG(iv, genes = genes)
         b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude)
