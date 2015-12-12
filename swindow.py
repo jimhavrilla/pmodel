@@ -4,6 +4,16 @@ from operator import attrgetter
 import re
 from pyfaidx import Fasta
 from precision import remove_trailing_zeros as rtz
+from argparse import ArgumentParser
+
+parser = ArgumentParser()
+parser.add_argument("--input", "-i", help = "file with regions (doms and nodoms) defined", type = str)
+parser.add_argument("--genome", "-g", help = "fasta genome file for CpG calculations", type = str)
+parser.add_argument("--pathogenic", "-p", help = "file with truth set for pathogenicity comparison", type = str)
+parser.add_argument("--truetype", "-t", help = "truth set type, specifies what function to use, e.g., clinvar vs pLI", type = str)
+parser.add_argument("--maf", "-m", help = "maf cutoff for baseline/uptoN metric and other metrics that utilize maf cutoffs", type = float)
+parser.add_argument("--exclude", "-e", help = "what to exclude from calculations regarding upton metric", type = str)
+args = parser.parse_args()
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
 patt = re.compile(',|\|')
@@ -49,13 +59,16 @@ def windower(iterable, grouper=size_grouper(20)):
             chunk.append(iv)
     yield chunk
 
-def baseline(intervals, maf_cutoff = 1e-05):
+def baseline(intervals, maf_cutoff = 1e-05, exclude = None):
     ct, l = 0.0, 0.0
     for iv in intervals:
         l += iv.end - iv.start
         if float(iv.mafs) <= maf_cutoff:
             dnds = patt.split(iv.type)
-            if not dnds.count('ds'):
+            if exclude != None:
+                if not dnds.count(exclude):
+                    ct += 1
+            else:
                 ct += 1
     return intervals[0].chrom, intervals[0].start, intervals[-1].end, ct, l # change column indices nigga
 
@@ -446,7 +459,7 @@ def domlimit(domain, pval, ent):
     return label,x,y
 
 def example2():
-    domain, pval, ent, tbl, ratio, num_intervals, num_domains, genes = runcontingent(sys.argv[1]) #'/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz'
+    domain, pval, ent, tbl, ratio, num_intervals, num_domains, genes = runcontingent(args.input) #'/uufs/chpc.utah.edu/common/home/u6000294/lustre/u6000294/pmodel/y.sort.bed.gz'
     import matplotlib.cm as cm
     import matplotlib.pyplot as plt
     import statsmodels.stats.multitest as smm
@@ -506,15 +519,15 @@ def example3():
     from scipy.stats import mannwhitneyu as mw
     import numpy as np
 
-    iterator = JimFile(sys.argv[1])
-    #it = ts.reader(sys.argv[1]) #'/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz'
+    iterator = JimFile(args.input)
+    #it = ts.reader(args.input) #'/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz'
     #iterable = (Interval(**iv) for iv in it)
 
     results = defaultdict(lambda : defaultdict(list))
     ms = defaultdict(list)
-    ff = sys.argv[2]
+    ff = args.genome
     cpg_cutoff = {}
-    maf_cutoff = float(sys.argv[4]) if len(sys.argv) > 4 else 1e-05
+    maf_cutoff = float(args.maf) if args.maf else 1e-05
     start = 0
     end = .2
     step = .025
@@ -529,9 +542,12 @@ def example3():
     cons = []
     genes = Fasta(ff)
     y = list(windower(iterator, byregiondist))
+    exclude = None
+    if args.exclude:
+        exclude = args.exclude
     for iv in y: # iterable, size_grouper(1)
         cpg = CpG(iv, genes = genes)
-        b = baseline(iv, maf_cutoff = maf_cutoff)
+        b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude)
         ms['baseline'].append((iv,b[3]/b[4],cpg))
         base.append(b)
     count = 0.0
@@ -577,19 +593,20 @@ def example3():
                 if ct[2] >= cpg_cutoff[cutoff][0] and ct[2] <= cpg_cutoff[cutoff][1]:
                     results[metric][co].append(ct)
     
-    option = sys.argv[5]
+    option = args.truetype
     if option == "clinvar" or option == "c":
         func = clinvar
+        trusrc = "clinvar"
     if option == "pli" or option == "p":
         func = pli
+        trusrc = "pli"
     for metric in results:
         for cutoff in cutoffs:
             print metric, cutoff
             fig, axes = plt.subplots(2)
             fig.tight_layout()
-            #counts = evaldoms(results[metric], sys.argv[3]) # /uufs/chpc.utah.edu/common/home/u6000771/Projects/gemini_install/data/gemini/data/clinvar_20150305.tidy.vcf.gz
             counts = evaldoms(results[metric][cutoff],
-                    sys.argv[3], # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp
+                    args.pathogenic, # forweb_cleaned_exac_r03_march16_z_data_pLI.txt from ExAC ftp or clinvar_20150305.tidy.vcf.gz from clinvar src
                     func)
             imin, imax = np.percentile(counts[True] + counts[False], [0.01, 99.99])
             axes[0].hist(counts[True], bins=80) #,label = cutoff)
@@ -602,8 +619,8 @@ def example3():
             axes[1].set_xlabel("not-pathogenic")
             axes[1].set_xlim(imin, imax)
             plt.show()
-            plt.savefig(metric + cutoff + "." + rtz(maf_cutoff) + ".png", bbox_inches = 'tight')
-            print metrics(counts[True], counts[False], metric + cutoff + "." + rtz(maf_cutoff) + ".auc.png", cutoff = cutoff)
+            plt.savefig(metric + "." + trusrc + "." + cutoff + "." + rtz(maf_cutoff) + ".png", bbox_inches = 'tight')
+            print metrics(counts[True], counts[False], metric + "." + trusrc + "." + cutoff + "." + rtz(maf_cutoff) + ".auc.png", cutoff = cutoff)
             print mw(counts[True], counts[False])
             del fig
             plt.close()
