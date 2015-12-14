@@ -556,7 +556,7 @@ def example3():
         base.append(b)
     count = 0.0
     totlen = 0.0
-    for x in b:
+    for b in base:
         count += b[3]
         totlen += b[4]
     baserate = count/totlen
