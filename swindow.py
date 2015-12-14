@@ -560,10 +560,9 @@ def example3():
         count += b[3]
         totlen += b[4]
     baserate = count/totlen
-    un = []
-    for b in base:
-        un.append(upton(b, baserate, maf_cutoff = maf_cutoff))
-    for iv, u in zip(y, un):
+    print baserate
+    for iv, b in zip(y, base):
+        u = upton(b, baserate, maf_cutoff = maf_cutoff)
         c = constraint(iv, maf_cutoff = maf_cutoff, genes = genes, upton = u)
         ct = (iv, 
                c,
