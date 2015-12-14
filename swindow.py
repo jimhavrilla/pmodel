@@ -5,6 +5,7 @@ import re
 from pyfaidx import Fasta
 from precision import remove_trailing_zeros as rtz
 from argparse import ArgumentParser
+from math import log, e, pow
 
 parser = ArgumentParser()
 parser.add_argument("--input", "-i", help = "file with regions (doms and nodoms) defined", type = str)
@@ -70,10 +71,12 @@ def baseline(intervals, maf_cutoff = 1e-05, exclude = None):
                     ct += 1
             else:
                 ct += 1
-    return intervals[0].chrom, intervals[0].start, intervals[-1].end, ct, l # change column indices nigga
+    return intervals[0].chrom, intervals[0].start, intervals[-1].end, ct, l
 
 def upton(base, baserate, maf_cutoff = 1e-05):
-    upton = (base[0], base[1], base[2], base[3] / (base[4] * baserate)) 
+    obs = base[3] / base[4]
+    exp = baserate
+    upton = (base[0], base[1], base[2], (obs ** obs) / (e ** -exp * (e * exp) ** obs))
     return upton
 
 def CpG(intervals, genes):
@@ -90,9 +93,7 @@ def CpG(intervals, genes):
 def IAFI(intervals, n_samples):
     minaf = 1.0 / (2 * n_samples + 1)
     val = sum(1.0/max(iv.aaf, minaf) for iv in intervals)
-    return log10(val / len(intervals))
-
-from math import log10
+    return log(val / len(intervals), 10)
 
 def IAFI_inline(intervals, n_samples, patt = patt):
     total_region_len = 0
@@ -153,7 +154,7 @@ def constraint(intervals, maf_cutoff, genes, upton):
     #base = baseline(intervals, maf_cutoff)[3]
     #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
-    constraint = density*dnds*(1-upton)#*float(1-cpg)
+    constraint = density*dnds*upton#*float(1-cpg)
 
     return constraint 
 
@@ -281,7 +282,7 @@ def slider(iterable, grouper, metric, **kwargs):
     >>> interval = namedtuple('interval', ['chrom', 'start', 'end', 'aaf'])
     >>> iterable = [interval('2', 22, 24, 0.25), interval('2', 24, 25, 0.02), interval('2', 33, 34, 0.000002)]
     >>> [x[1] for x in slider(iterable, size_grouper(2), IAFI, n_samples=3333333)]
-    [1.4313637641589874, 5.698970004336019]
+    [1.4313637641589871, 5.698970004336018]
 
     >>> [x[1] for x in slider(iterable, size_grouper(2), FRV, maf_cutoff=0.05)]
     [0.5, 1.0]
@@ -463,7 +464,6 @@ def example2():
     import matplotlib.cm as cm
     import matplotlib.pyplot as plt
     import statsmodels.stats.multitest as smm
-    from math import log
     adj_p = pval
     #rej,adj_p=smm.multipletests(pval,method='bonferroni')[:2]
     adj_p = [-log(y,10) for y in adj_p]
@@ -560,7 +560,6 @@ def example3():
         count += b[3]
         totlen += b[4]
     baserate = count/totlen
-    print baserate
     for iv, b in zip(y, base):
         u = upton(b, baserate, maf_cutoff = maf_cutoff)
         c = constraint(iv, maf_cutoff = maf_cutoff, genes = genes, upton = u)
