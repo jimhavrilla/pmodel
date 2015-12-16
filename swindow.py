@@ -5,7 +5,8 @@ import re
 from pyfaidx import Fasta
 from precision import remove_trailing_zeros as rtz
 from argparse import ArgumentParser
-from math import log, e, pow
+from math import log, e
+import scipy.stats as ss
 
 parser = ArgumentParser()
 parser.add_argument("--input", "-i", help = "file with regions (doms and nodoms) defined", type = str)
@@ -76,7 +77,7 @@ def baseline(intervals, maf_cutoff = 1e-05, exclude = None):
 def upton(base, baserate, maf_cutoff = 1e-05):
     obs = base[3] / base[4]
     exp = baserate
-    upton = (base[0], base[1], base[2], (obs ** obs) / (e ** -exp * (e * exp) ** obs))
+    upton = (base[0], base[1], base[2], 1 - ss.binom_test(base[3], base[4], exp))
     return upton
 
 def CpG(intervals, genes):
