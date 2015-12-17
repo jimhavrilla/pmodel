@@ -86,7 +86,7 @@ def baseline(intervals, maf_cutoff = 1e-05, exclude = None, comparison = "le"):
                 ct += 1
     return intervals[0].chrom, intervals[0].start, intervals[-1].end, ct, l
 
-def upton(base, baserate, maf_cutoff = 1e-05):
+def upton(base, baserate):
     obs = base[3] / base[4]
     exp = baserate
     upton = (base[0], base[1], base[2], ss.binom_test(base[3], base[4], exp))
@@ -140,15 +140,6 @@ def FRV_inline(intervals, maf_cutoff, patt = patt):
         s += sum(1.0 for af in afs if af <= maf_cutoff)
     return s / n
 
-def count_nons(intervals, patt = patt):
-    dn, l = 0.0, 0.0
-    assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
-    for iv in intervals:
-        dnds = patt.split(iv.type)
-        dn += dnds.count('dn')
-        l += iv.end - iv.start
-    return float(dn) / l
-
 def dnds_density(intervals, maf_cutoff, patt = patt):
     dn, ds, na, l = 0.0, 0.0, 0.0, 0.0
     assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type)) 
@@ -158,16 +149,16 @@ def dnds_density(intervals, maf_cutoff, patt = patt):
         ds += dnds.count('ds')
         na += dnds.count('na')
         l += iv.end - iv.start
-    return float(dn) / (ds or 1), float(dn+ds+na) / l
+    return float(dn)/l, float(dn) / (ds or 1), float(dn+ds+na) / l
 
 def constraint(intervals, maf_cutoff, genes, upton):
     #cpg = CpG(intervals, genes)
-    upton = upton[3]
-    dnds, density = dnds_density(intervals, maf_cutoff)
+    #upton = upton[3]
+    nons, dnds, density = dnds_density(intervals, maf_cutoff)
     #base = baseline(intervals, maf_cutoff)[3]
     #iafi = IAFI_inline(intervals, n_samples=61000)
     #dn_density = count_nons(intervals)
-    constraint = density*dnds*upton#*float(1-cpg)
+    constraint = density*nons#upton#*float(1-cpg)
 
     return constraint 
 
@@ -575,7 +566,7 @@ def example3():
         totlen += b[4]
     baserate = count/totlen
     for iv, b in zip(y, base):
-        u = upton(b, baserate, maf_cutoff = maf_cutoff)
+        u = upton(b, baserate)
         c = constraint(iv, maf_cutoff = maf_cutoff, genes = genes, upton = u)
         ct = (iv, 
                c,
