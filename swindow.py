@@ -65,7 +65,7 @@ def baseline(intervals, maf_cutoff = 1e-05, exclude = None):
     ct, l = 0.0, 0.0
     for iv in intervals:
         l += iv.end - iv.start
-        if float(iv.mafs) <= maf_cutoff:
+        if float(iv.mafs) >= maf_cutoff:
             dnds = patt.split(iv.type)
             if exclude != None:
                 if not dnds.count(exclude):
@@ -77,7 +77,7 @@ def baseline(intervals, maf_cutoff = 1e-05, exclude = None):
 def upton(base, baserate, maf_cutoff = 1e-05):
     obs = base[3] / base[4]
     exp = baserate
-    upton = (base[0], base[1], base[2], 1 - ss.binom_test(base[3], base[4], exp))
+    upton = (base[0], base[1], base[2], ss.binom_test(base[3], base[4], exp))
     return upton
 
 def CpG(intervals, genes):
@@ -217,7 +217,7 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
         pos = lambda v: (v.get('chrom', v['chr']), int(v['start']), int(v['end']))
 
     for v in viter:
-        patho = is_pathogenic(v)
+        patho = not is_pathogenic(v)
 
         chrom, start, end = pos(v)
         tree = by_chrom[chrom]
