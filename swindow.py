@@ -15,6 +15,7 @@ parser.add_argument("--pathogenic", "-p", help = "file with truth set for pathog
 parser.add_argument("--truetype", "-t", help = "truth set type, specifies what function to use, e.g., clinvar vs pLI", type = str)
 parser.add_argument("--maf", "-m", help = "maf cutoff for baseline/uptoN metric and other metrics that utilize maf cutoffs", type = float)
 parser.add_argument("--exclude", "-e", help = "what to exclude from calculations regarding upton metric", type = str)
+parser.add_argument("--comparison", "-c", help = "which comparison to use for maf cutoff, greater than/equal to (le), ge, lt, gt", type = str)
 args = parser.parse_args()
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
@@ -61,11 +62,22 @@ def windower(iterable, grouper=size_grouper(20)):
             chunk.append(iv)
     yield chunk
 
-def baseline(intervals, maf_cutoff = 1e-05, exclude = None):
+def baseline(intervals, maf_cutoff = 1e-05, exclude = None, comparison = "le"):
+    import operator
+    def get_truth(inp, compare, cut):    
+        return compare(inp, cut)
     ct, l = 0.0, 0.0
+    if comparison == "lt":
+        comp = operator.lt
+    elif comparison == "gt":
+        comp = operator.gt
+    elif comparison == "le":
+        comp = operator.le
+    elif comparison == "ge":
+        comp = operator.ge
     for iv in intervals:
         l += iv.end - iv.start
-        if float(iv.mafs) >= maf_cutoff:
+        if get_truth(float(iv.mafs), comp, maf_cutoff):
             dnds = patt.split(iv.type)
             if exclude != None:
                 if not dnds.count(exclude):
@@ -217,7 +229,7 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
         pos = lambda v: (v.get('chrom', v['chr']), int(v['start']), int(v['end']))
 
     for v in viter:
-        patho = not is_pathogenic(v)
+        patho = is_pathogenic(v)
 
         chrom, start, end = pos(v)
         tree = by_chrom[chrom]
@@ -545,14 +557,14 @@ def example3():
     y = list(windower(iterator, byregiondist))
     exclude = None
     if args.exclude:
-        exclude = args.exclude
+        exclude = "ex" + args.exclude
     if exclude == None:
         ex = ""
     else:
         ex = exclude
     for iv in y: # iterable, size_grouper(1)
         cpg = CpG(iv, genes = genes)
-        b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude)
+        b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude, comparison = args.comparison)
         ms['baseline'].append((iv,b[3]/b[4],cpg))
         base.append(b)
     count = 0.0
@@ -579,8 +591,8 @@ def example3():
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-    f1 = open("constraint."+ rtz(maf_cutoff) + ".ex" + ex + ".bed","w")
-    f2 = open("baseline."+ rtz(maf_cutoff) + ".ex" + ex + ".bed","w")
+    f1 = open("constraint."+ rtz(maf_cutoff) + ex + ".bed","w")
+    f2 = open("baseline."+ rtz(maf_cutoff) + ex + ".bed","w")
     for b,c in zip(base,cons):
         f1.write("\t".join(map(str,c))+"\n")
         f2.write("\t".join(map(str,b))+"\n")
@@ -622,8 +634,8 @@ def example3():
             axes[1].set_xlabel("not-pathogenic")
             axes[1].set_xlim(imin, imax)
             plt.show()
-            plt.savefig(metric + "." + trusrc + "ex" + ex + "." + cutoff + "." + rtz(maf_cutoff) + ".png", bbox_inches = 'tight')
-            print metrics(counts[True], counts[False], metric + "." + trusrc + "ex" + ex + "." + cutoff + "." + rtz(maf_cutoff) + ".auc.png", cutoff = cutoff)
+            plt.savefig(metric + "." + trusrc + ex + "." + cutoff + "." + rtz(maf_cutoff) + ".png", bbox_inches = 'tight')
+            print metrics(counts[True], counts[False], metric + "." + trusrc + ex + "." + cutoff + "." + rtz(maf_cutoff) + ".auc.png", cutoff = cutoff)
             print mw(counts[True], counts[False])
             del fig
             plt.close()
