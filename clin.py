@@ -1,4 +1,4 @@
-from cyvcf2 import VCF
+from cyvcf2 import VCF, Writer
 import re
 import sys
 
@@ -18,7 +18,8 @@ vcf_path = sys.argv[1]
 max_aaf = float(sys.argv[2])
 
 viter = VCF(vcf_path)
+w = Writer("-", viter)
 pos = lambda v: (v.CHROM, v.start, v.end)
 for v in viter:
     if clinvar(v) and aaf(v, max_aaf):
-        print v,
+        w.write_record(v)
