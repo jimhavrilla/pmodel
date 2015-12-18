@@ -549,11 +549,11 @@ def example3():
     exclude = None
     comparison = args.comparison
     if args.exclude:
-        exclude = "ex" + args.exclude
+        exclude = args.exclude
     if exclude == None:
         ex = ""
     else:
-        ex = exclude
+        ex = "ex" + args.exclude + "."
     for iv in y: # iterable, size_grouper(1)
         cpg = CpG(iv, genes = genes)
         b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude, comparison = comparison)
