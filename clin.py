@@ -23,3 +23,4 @@ pos = lambda v: (v.CHROM, v.start, v.end)
 for v in viter:
     if clinvar(v) and aaf(v, max_aaf):
         w.write_record(v)
+w.close()

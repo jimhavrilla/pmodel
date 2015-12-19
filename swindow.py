@@ -208,29 +208,25 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
 
     tbl = {True: [], False: []}
 
-    by_chrom = defaultdict(InterLap)
-    for it in iterable:
-        by_chrom[it[0][0].chrom].add((it[0][0].start, it[0][-1].end, it[1]))
-
+    tree = defaultdict(InterLap)
     if vcf_path.endswith((".vcf", ".vcf.gz")):
-        viter = VCF(vcf_path)
-        pos = lambda v: (v.CHROM, v.start, v.end)
+        for v in VCF(vcf_path):
+            if is_pathogenic(v):
+                tree[v.CHROM].add((v.start, v.end))
     else:
-        viter = ts.reader(vcf_path)
-        pos = lambda v: (v.get('chrom', v['chr']), int(v['start']), int(v['end']))
+        for d in ts.reader(vcf_path):
+            if is_pathogenic(d):
+                chrom = d.get('chrom', d['chr'])
+                start, end = int(v['start']), int(v['end'])
+                tree[chrom].add((start, end))
 
-    for v in viter:
-        patho = is_pathogenic(v)
+    for reg in iterable:
+        chrom = reg[0][0].chrom
+        start, end = reg[0][0].start, reg[0][-1].end
 
-        chrom, start, end = pos(v)
-        tree = by_chrom[chrom]
-        vals = [x[2] for x in tree.find((start, end))]
-
-        if vals != []:
-            #print patho, vals
-            #vals = [it[1] for it in cvars if overlaps(chunkse(it[0]), v)]
-            tbl[patho].extend(vals)
-
+        patho = len(list(tree[chrom].find((start, end)))) != 0
+        tbl[patho].append(reg[1])
+ 
     return tbl
 
 
@@ -509,7 +505,7 @@ def example2():
     plt.show()
 
 def clinvar(v):
-    return [x in "45" for x in re.split(patt,v.INFO.get("CLNSIG"))][0]
+    return any(x in "45" for x in re.split(patt,v.INFO.get("CLNSIG")))
     
 def pli(v):
     return float(v['pLI']) < 0.9
@@ -554,8 +550,9 @@ def example3():
         ex = ""
     else:
         ex = "ex" + args.exclude + "."
+    cpg=1
     for iv in y: # iterable, size_grouper(1)
-        cpg = CpG(iv, genes = genes)
+        #cpg = CpG(iv, genes = genes)
         b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude, comparison = comparison)
         ms['baseline'].append((iv,b[3]/b[4],cpg))
         base.append(b)
