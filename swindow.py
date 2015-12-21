@@ -16,7 +16,7 @@ parser.add_argument("--truetype", "-t", help = "truth set type, specifies what f
 parser.add_argument("--maf", "-m", help = "maf cutoff for baseline/uptoN metric and other metrics that utilize maf cutoffs", type = float)
 parser.add_argument("--exclude", "-e", help = "what to exclude from calculations regarding upton metric", type = str)
 parser.add_argument("--comparison", "-c", help = "which comparison to use for maf cutoff, greater than/equal to (le), ge, lt, gt", type = str, default = "le")
-parser.add_argument("--regions", "-r", help = "select regional model, whether to go by file or pick region size, must use region size option if selected, choices are domains, nodoms, chunks, all", type = str, default = "all")
+parser.add_argument("--regions", "-r", help = "select regional model, whether to go by file or pick region size, must use region size option if selected, choices are domains, nodoms, chunks, genes, all (regions)", type = str, default = "all")
 parser.add_argument("--regionsize", "-s", help = "select region size for analysis", type = int)
 
 args = parser.parse_args()
@@ -32,7 +32,13 @@ def byregiondist(grp, inext):
     return inext.autoregs != grp[0].autoregs \
             or inext.start - grp[-1].end > 50
 
+def bytranscriptdist(grp, inext):
+    """ group by gene, split at gaps > 100 bases """
+    return inext.transcript != grp[0].transcript \
+            or inext.start - grp[-1].end > 100
+
 def smallchunk(grp, inext, regionsize = 50):
+    """ group by chunk, input size, default is 50 """
     return len(grp) > regionsize or inext.transcript != grp[0].transcript \
         or inext.start - grp[-1].end > 40
 
@@ -79,7 +85,16 @@ def windower(iterable, grouper=size_grouper(20), chunksize = ""):
                 chunk.append(iv)
         yield chunk
 
-def baseline(intervals, maf_cutoff = 1e-05, exclude = None, comparison = "le"):
+def RVIS(intervals, maf_cutoff = 1e-03, patt = patt):
+    ct, l = 0.0, 0.0
+    for iv in intervals:
+        l += iv.end - iv.start
+        if float(iv.mafs) >= maf_cutoff:
+            dnds = patt.split(iv.type)
+            ct += dnds.count('dn')
+    return ct / l
+
+def baseline(intervals, maf_cutoff = 1e-05, exclude = None, comparison = "le", patt = patt):
     import operator
     def get_truth(inp, compare, cut):    
         return compare(inp, cut)
@@ -570,6 +585,9 @@ def example3():
     if args.regions in ["domains", "nodoms", "all"]:
         regioner = byregiondist
         chunksize = ""
+    if args.regions == "genes":
+        regioner = bytranscriptdist
+        chunksize = ""
     y = list(windower(iterator, regioner, chunksize))
     comparison = args.comparison
     if args.exclude:
@@ -582,7 +600,7 @@ def example3():
     if y: 
         for iv in y: # iterable, size_grouper(1)
             #cpg = CpG(iv, genes = genes)
-            b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude, comparison = comparison)
+            b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude, comparison = comparison, patt = patt)
             ms['baseline'].append((iv,b[3]/b[4],cpg))
             base.append(b)
     count = 0.0
@@ -595,6 +613,7 @@ def example3():
     for iv, b in zip(y, base):
         u = upton(b, baserate)
         c = constraint(iv, maf_cutoff = maf_cutoff, genes = genes, upton = u)
+        r = RVIS(iv, maf_cutoff = 1e-3, patt = patt)
         ct = (iv, 
                c,
                cpg)
@@ -605,6 +624,10 @@ def example3():
                 u,
                 cpg)
         ms['upton'].append((ct[0],ct[1][3],ct[2]))
+        ct = (iv,
+                r,
+                cpg)
+        ms['rvis'].append((ct[0],ct[1],ct[2]))
         cons.append((u[0],u[1],u[2],c))
        # results['iafi'].append((iv, IAFI_inline(iv, n_samples=61000)))
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
