@@ -43,7 +43,7 @@ def frange(start, stop, step):
         yield float("%g" % r)
 
 
-def windower(iterable, grouper=size_grouper(20), chunksize = None):
+def windower(iterable, grouper=size_grouper(20), chunksize = ""):
     """
     windower takes an iterable of intervals and yields groups
     defined by grouper.
@@ -60,7 +60,7 @@ def windower(iterable, grouper=size_grouper(20), chunksize = None):
     """
     iterable = iter(iterable)
     
-    if chunksize == None:
+    if chunksize == "":
         chunk = [next(iterable)]
         for iv in iterable:
             if grouper(chunk, iv):
@@ -569,7 +569,7 @@ def example3():
         chunksize = args.regionsize
     if args.regions in ["domains", "nodoms", "all"]:
         regioner = byregiondist
-        chunksize = None
+        chunksize = ""
     y = list(windower(iterator, regioner, chunksize))
     comparison = args.comparison
     if args.exclude:
@@ -610,8 +610,9 @@ def example3():
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-    f1 = open("constraint."+ rtz(maf_cutoff) + "." + comparison + "." + ex + ".bed","w")
-    f2 = open("baseline."+ rtz(maf_cutoff) + "." + comparison + "." + ex + ".bed","w")
+    bedname = "constraint."+ rtz(maf_cutoff) + "." + comparison + "." + args.regions + str(chunksize) + "." + ex 
+    f1 = open(bedname + ".bed","w")
+    f2 = open(bedname + ".bed","w")
     for b,c in zip(base,cons):
         f1.write("\t".join(map(str,c))+"\n")
         f2.write("\t".join(map(str,b))+"\n")
@@ -636,6 +637,7 @@ def example3():
         trusrc = "pli"
     for metric in results:
         for cutoff in cutoffs:
+            imgname = metric + "." + trusrc + "." + comparison + "." + args.regions + str(chunksize) + "." + ex + cutoff + "." + rtz(maf_cutoff)
             print metric, cutoff
             fig, axes = plt.subplots(2)
             fig.tight_layout()
@@ -653,8 +655,8 @@ def example3():
             axes[1].set_xlabel("not-pathogenic")
             axes[1].set_xlim(imin, imax)
             plt.show()
-            plt.savefig(metric + "." + trusrc + "." + comparison + "." + ex + cutoff + "." + rtz(maf_cutoff) + ".dist.png", bbox_inches = 'tight')
-            print metrics(counts[True], counts[False], metric + "." + trusrc + "." + comparison + "." + ex + cutoff + "." + rtz(maf_cutoff) + ".auc.png", cutoff = cutoff)
+            plt.savefig(imgname + ".dist.png", bbox_inches = 'tight')
+            print metrics(counts[True], counts[False], imgname + ".auc.png", cutoff = cutoff)
             print mw(counts[True], counts[False])
             del fig
             plt.close()
