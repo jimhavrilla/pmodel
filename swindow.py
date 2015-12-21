@@ -16,6 +16,9 @@ parser.add_argument("--truetype", "-t", help = "truth set type, specifies what f
 parser.add_argument("--maf", "-m", help = "maf cutoff for baseline/uptoN metric and other metrics that utilize maf cutoffs", type = float)
 parser.add_argument("--exclude", "-e", help = "what to exclude from calculations regarding upton metric", type = str)
 parser.add_argument("--comparison", "-c", help = "which comparison to use for maf cutoff, greater than/equal to (le), ge, lt, gt", type = str, default = "le")
+parser.add_argument("--regions", "-r", help = "select regional model, whether to go by file or pick region size, must use region size option if selected, choices are domains, nodoms, chunks, all", type = str, default = "all")
+parser.add_argument("--regionsize", "-s", help = "select region size for analysis", type = int)
+
 args = parser.parse_args()
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
@@ -29,6 +32,10 @@ def byregiondist(grp, inext):
     return inext.autoregs != grp[0].autoregs \
             or inext.start - grp[-1].end > 50
 
+def smallchunk(grp, inext, regionsize = 50):
+    return len(grp) > regionsize or inext.transcript != grp[0].transcript \
+        or inext.start - grp[-1].end > 40
+
 def frange(start, stop, step):
     r = start
     while (stop-r) > 1e-05: # allows a 1e-05 margin of error
@@ -36,7 +43,7 @@ def frange(start, stop, step):
         yield float("%g" % r)
 
 
-def windower(iterable, grouper=size_grouper(20)):
+def windower(iterable, grouper=size_grouper(20), chunksize = None):
     """
     windower takes an iterable of intervals and yields groups
     defined by grouper.
@@ -52,15 +59,25 @@ def windower(iterable, grouper=size_grouper(20)):
 
     """
     iterable = iter(iterable)
-
-    chunk = [next(iterable)]
-    for iv in iterable:
-        if grouper(chunk, iv):
-            yield chunk
-            chunk = [iv]
-        else:
-            chunk.append(iv)
-    yield chunk
+    
+    if chunksize == None:
+        chunk = [next(iterable)]
+        for iv in iterable:
+            if grouper(chunk, iv):
+                yield chunk
+                chunk = [iv]
+            else:
+                chunk.append(iv)
+        yield chunk
+    else:
+        chunk = [next(iterable)]
+        for iv in iterable:
+            if grouper(chunk, iv, chunksize):
+                yield chunk
+                chunk = [iv]
+            else:
+                chunk.append(iv)
+        yield chunk
 
 def baseline(intervals, maf_cutoff = 1e-05, exclude = None, comparison = "le"):
     import operator
@@ -223,7 +240,6 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
     for reg in iterable:
         chrom = reg[0][0].chrom
         start, end = reg[0][0].start, reg[0][-1].end
-
         patho = len(list(tree[chrom].find((start, end)))) != 0
         tbl[patho].append(reg[1])
  
@@ -410,14 +426,21 @@ class Interval(object):
             yield I
 
 class JimFile(object):
-    def __init__(self, path, include_empties=True):
+    def __init__(self, path, regions_excluded, include_empties=True):
         self.path = path
         self.include_empties = include_empties
+        self.re = regions_excluded
 
     def __iter__(self):
         cache = []
         for d in ts.reader(self.path):
             d = Interval(**d)
+            if self.re == "nodoms":
+                if "NoDom" not in d.autoregs:
+                    continue
+            elif self.re == "domains":
+                if "NoDom" in d.autoregs:
+                    continue
             # keep appending to the cache until we reach a different transcript
             # because nodoms occur in a different line from the domains but we
             # want everything to come out in order.
@@ -519,7 +542,7 @@ def example3():
     from scipy.stats import mannwhitneyu as mw
     import numpy as np
 
-    iterator = JimFile(args.input)
+    iterator = JimFile(args.input, args.regions)
     #it = ts.reader(args.input) #'/scratch/ucgd/serial/quinlan_lab/data/u1021864/regionsmafsdnds.bed.gz'
     #iterable = (Interval(**iv) for iv in it)
 
@@ -541,27 +564,34 @@ def example3():
     base = []
     cons = []
     genes = Fasta(ff)
-    y = list(windower(iterator, byregiondist))
-    exclude = None
+    if args.regions == "chunks":
+        regioner = smallchunk
+        chunksize = args.regionsize
+    if args.regions in ["domains", "nodoms", "all"]:
+        regioner = byregiondist
+        chunksize = None
+    y = list(windower(iterator, regioner, chunksize))
     comparison = args.comparison
     if args.exclude:
         exclude = args.exclude
-    if exclude == None:
-        ex = ""
-    else:
         ex = "ex" + args.exclude + "."
+    else:
+        exclude = None
+        ex = ""
     cpg=1
-    for iv in y: # iterable, size_grouper(1)
-        #cpg = CpG(iv, genes = genes)
-        b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude, comparison = comparison)
-        ms['baseline'].append((iv,b[3]/b[4],cpg))
-        base.append(b)
+    if y: 
+        for iv in y: # iterable, size_grouper(1)
+            #cpg = CpG(iv, genes = genes)
+            b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude, comparison = comparison)
+            ms['baseline'].append((iv,b[3]/b[4],cpg))
+            base.append(b)
     count = 0.0
     totlen = 0.0
-    for b in base:
-        count += b[3]
-        totlen += b[4]
-    baserate = count/totlen
+    if base:
+        for b in base:
+            count += b[3]
+            totlen += b[4]
+        baserate = count/totlen
     for iv, b in zip(y, base):
         u = upton(b, baserate)
         c = constraint(iv, maf_cutoff = maf_cutoff, genes = genes, upton = u)
