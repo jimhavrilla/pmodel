@@ -133,7 +133,10 @@ def baseline(intervals, maf_cutoff = 1e-05, exclude = None, comparison = "le", p
 def upton(base, baserate):
     obs = base[3] / base[4]
     exp = baserate
-    upton = (base[0], base[1], base[2], ss.binom_test(base[3], base[4], exp))
+    if base[3]/base[4] < exp:
+        upton = (base[0], base[1], base[2], 1)
+    else:
+        upton = (base[0], base[1], base[2], ss.binom_test(base[3], base[4], exp))
     return upton
 
 def CpG(intervals, genes):
