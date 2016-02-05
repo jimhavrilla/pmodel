@@ -18,6 +18,7 @@ parser.add_argument("--exclude", "-e", help = "what to exclude from calculations
 parser.add_argument("--comparison", "-c", help = "which comparison to use for maf cutoff, greater than/equal to (le), ge, lt, gt", type = str, default = "le")
 parser.add_argument("--regions", "-r", help = "select regional model, whether to go by file or pick region size, must use region size option if selected, choices are domains, nodoms, chunks, genes, all (regions)", type = str, default = "all")
 parser.add_argument("--regionsize", "-s", help = "select region size for analysis", type = int)
+parser.add_argument("--conservation", "-v", help = "GERP conservation file", type = str)
 
 args = parser.parse_args()
 
@@ -93,6 +94,17 @@ def RVIS(intervals, maf_cutoff = 1e-03, patt = patt):
             dnds = patt.split(iv.type)
             ct += dnds.count('dn')
     return ct / l
+
+def get_conservation(r):
+        """
+        Calculate the conservation for the interval based on the
+        GERP scores weighted by the number of base pairs of overlap
+        """
+        start = float(r['start']); end = float(r['end']); overlap = float(r['overlap']); gerp = float(r['gerp'])
+        overlap_fractions = (end - start) / overlap
+        w_mu = gerp / overlap_fractions
+        
+        return w_mu
 
 def baseline(intervals, maf_cutoff = 1e-05, exclude = None, comparison = "le", patt = patt):
     import operator
@@ -592,10 +604,15 @@ def example3():
     comparison = args.comparison
     if args.exclude:
         exclude = args.exclude
-        ex = "ex" + args.exclude + "."
+        ex = "ex" + args.exclude + "."       
     else:
         exclude = None
         ex = ""
+    cv = []
+    if args.conservation:
+        for r in ts.reader(args.conservation):
+            v = get_conservation(r)
+            cv.append(v)
     cpg=1
     if y: 
         for iv in y: # iterable, size_grouper(1)
