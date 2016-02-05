@@ -231,6 +231,11 @@ def contingent(intervals, domain_name, nodoms_only=False):
 def overlaps(a, b):
     return a[0] < b.end and a[1] > b.start
 
+def uptest():
+    b = "/scratch/ucgd/lustre/u1021864/serial/y.sort.bed.gz"
+    it = ts.reader(b)
+    iterable = (Interval(**iv) for iv in it)
+
 def rvistest():
     vcf_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
     bed = "rvis.bed"
@@ -245,7 +250,8 @@ def rvistest():
     print metrics(res[True], res[False], "x.auc.png")
 
 def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
-                                                [x in "5" for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
+                                                [x == "5" and
+                                                    v.INFO.get("max_aaf_all", -1) < 0.001 for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
                                 not_pathogenic=lambda v:
                                                 [x in "2" for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
                                                 ):
