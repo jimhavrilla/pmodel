@@ -245,9 +245,9 @@ def rvistest():
     print metrics(res[True], res[False], "x.auc.png")
 
 def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
-                                                [x in "45" for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
+                                                [x in "5" for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
                                 not_pathogenic=lambda v:
-                                                [x == "0" for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
+                                                [x in "2" for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
                                                 ):
     """
     given a some chunks with a metric applied, do we see a difference in
@@ -259,11 +259,16 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
     tbl = {True: [], False: []}
 
     tree = {True: defaultdict(InterLap), False: defaultdict(InterLap)}
+    n, p = 0, 0
     if vcf_path.endswith((".vcf", ".vcf.gz")):
         for v in VCF(vcf_path):
             path = is_pathogenic(v)
             nopath = not_pathogenic(v)
             if path == nopath: continue
+            if path:
+                p += 1
+            else:
+                n += 1
             # is it pathogenic
             tree[path][v.CHROM].add((v.start, v.end))
     else:
@@ -274,15 +279,21 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
                 start, end = int(v['start']), int(v['end'])
                 tree[chrom].add((start, end))
 
+    print >>sys.stderr, "pathogenic variants: %d non: %d" % (p, n)
+    counts = {True: 0, False: 0, "missing": 0}
     for reg in iterable:
         chrom = reg[0][0].chrom
         start, end = reg[0][0].start, reg[0][-1].end
         patho = len(list(tree[True][chrom].find((start, end)))) != 0
         nonpatho = len(list(tree[False][chrom].find((start, end)))) != 0
+        if not (patho or nonpatho):
+            counts["missing"] += 1
 
-        if patho and nonpatho:
+        if patho == nonpatho:
             continue
         tbl[patho].append(reg[1])
+        counts[patho] += 1
+    print "region counts:", counts
     return tbl
 
 
