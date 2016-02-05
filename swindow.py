@@ -8,19 +8,6 @@ from argparse import ArgumentParser
 from math import log, e
 import scipy.stats as ss
 
-parser = ArgumentParser()
-parser.add_argument("--input", "-i", help = "file with regions (doms and nodoms) defined", type = str)
-parser.add_argument("--genome", "-g", help = "fasta genome file for CpG calculations", type = str)
-parser.add_argument("--pathogenic", "-p", help = "file with truth set for pathogenicity comparison", type = str)
-parser.add_argument("--truetype", "-t", help = "truth set type, specifies what function to use, e.g., clinvar vs pLI", type = str)
-parser.add_argument("--maf", "-m", help = "maf cutoff for baseline/uptoN metric and other metrics that utilize maf cutoffs", type = float)
-parser.add_argument("--exclude", "-e", help = "what to exclude from calculations regarding upton metric", type = str)
-parser.add_argument("--comparison", "-c", help = "which comparison to use for maf cutoff, greater than/equal to (le), ge, lt, gt", type = str, default = "le")
-parser.add_argument("--regions", "-r", help = "select regional model, whether to go by file or pick region size, must use region size option if selected, choices are domains, nodoms, chunks, genes, all (regions)", type = str, default = "all")
-parser.add_argument("--regionsize", "-s", help = "select region size for analysis", type = int)
-parser.add_argument("--conservation", "-v", help = "GERP conservation file", type = str)
-
-args = parser.parse_args()
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
 patt = re.compile(',|\|')
@@ -66,7 +53,7 @@ def windower(iterable, grouper=size_grouper(20), chunksize = ""):
 
     """
     iterable = iter(iterable)
-    
+
     if chunksize == "":
         chunk = [next(iterable)]
         for iv in iterable:
@@ -103,12 +90,12 @@ def get_conservation(r):
         start = float(r['start']); end = float(r['end']); overlap = float(r['overlap']); gerp = float(r['gerp'])
         overlap_fractions = (end - start) / overlap
         w_mu = gerp / overlap_fractions
-        
+
         return w_mu
 
 def baseline(intervals, maf_cutoff = 1e-05, exclude = None, comparison = "le", patt = patt):
     import operator
-    def get_truth(inp, compare, cut):    
+    def get_truth(inp, compare, cut):
         return compare(inp, cut)
     ct, l = 0.0, 0.0
     if comparison == "lt":
@@ -189,7 +176,7 @@ def FRV_inline(intervals, maf_cutoff, patt = patt):
 
 def dnds_density(intervals, maf_cutoff, patt = patt):
     dn, ds, na, l = 0.0, 0.0, 0.0, 0.0
-    assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type)) 
+    assert (x in set(['dn','ds','na','.']) for x in patt.split(intervals[0].type))
     for iv in intervals:
         dnds = patt.split(iv.type)
         dn += dnds.count('dn')
@@ -207,7 +194,7 @@ def constraint(intervals, maf_cutoff, genes, upton):
     #dn_density = count_nons(intervals)
     constraint = density*nons#upton#*float(1-cpg)
 
-    return constraint 
+    return constraint
 
 def contingent(intervals, domain_name, nodoms_only=False):
     """
@@ -244,8 +231,24 @@ def contingent(intervals, domain_name, nodoms_only=False):
 def overlaps(a, b):
     return a[0] < b.end and a[1] > b.start
 
+def rvistest():
+    vcf_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
+    bed = "rvis.bed"
+
+    def genregions():
+        for d in ts.reader("rvis.bed"):
+            score = float(d['pct'])
+            chunk = [interval(d['chrom'], int(d['start']), int(d['end']))]
+            yield chunk, -score
+
+    res = evaldoms(genregions(), vcf_path)
+    print metrics(res[True], res[False], "x.auc.png")
+
 def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
-                                                [x in "45" for x in re.split(patt,v.INFO.get("CLNSIG"))][0]):
+                                                [x in "5" for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
+                                not_pathogenic=lambda v:
+                                                [x in "2" for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
+                                                ):
     """
     given a some chunks with a metric applied, do we see a difference in
     the values between pathogenic and non pathogenic variants?
@@ -255,24 +258,42 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
 
     tbl = {True: [], False: []}
 
-    tree = defaultdict(InterLap)
+    tree = {True: defaultdict(InterLap), False: defaultdict(InterLap)}
+    n, p = 0, 0
     if vcf_path.endswith((".vcf", ".vcf.gz")):
         for v in VCF(vcf_path):
-            if is_pathogenic(v):
-                tree[v.CHROM].add((v.start, v.end))
+            path = is_pathogenic(v)
+            nopath = not_pathogenic(v)
+            if path == nopath: continue
+            if path:
+                p += 1
+            else:
+                n += 1
+            # is it pathogenic
+            tree[path][v.CHROM].add((v.start, v.end))
     else:
+        # TODO: copy not_pathogenic logic above.
         for d in ts.reader(vcf_path):
             if is_pathogenic(d):
                 chrom = d.get('chrom', d['chr'])
                 start, end = int(v['start']), int(v['end'])
                 tree[chrom].add((start, end))
 
+    print >>sys.stderr, "pathogenic variants: %d non: %d" % (p, n)
+    counts = {True: 0, False: 0, "missing": 0}
     for reg in iterable:
         chrom = reg[0][0].chrom
         start, end = reg[0][0].start, reg[0][-1].end
-        patho = len(list(tree[chrom].find((start, end)))) != 0
+        patho = len(list(tree[True][chrom].find((start, end)))) != 0
+        nonpatho = len(list(tree[False][chrom].find((start, end)))) != 0
+        if not (patho or nonpatho):
+            counts["missing"] += 1
+
+        if patho == nonpatho:
+            continue
         tbl[patho].append(reg[1])
- 
+        counts[patho] += 1
+    print "region counts:", counts
     return tbl
 
 
@@ -345,7 +366,7 @@ def slider(iterable, grouper, metric, **kwargs):
     for chunk in windower(iterable, grouper):
         yield chunk, metric(chunk, **kwargs)
 
-def metrics(trues, falses, figname=None, cutoff = "0-1"):
+def metrics(trues, falses, figname=None, cutoff = None):
     from sklearn import metrics
     import matplotlib
     import seaborn as sns
@@ -366,7 +387,8 @@ def metrics(trues, falses, figname=None, cutoff = "0-1"):
     axes[0].set_xlabel("recall")
     axes[0].set_ylabel("precision")
     props = dict(boxstyle = 'round', facecolor = 'whitesmoke', alpha = 0.5)
-    axes[0].text(.85, .8, "CpG frac:\n" + cutoff.replace("-"," - "), transform = axes[0].transAxes, bbox = props)
+    if cutoff is not None:
+        axes[0].text(.85, .8, "CpG frac:\n" + cutoff.replace("-"," - "), transform = axes[0].transAxes, bbox = props)
 
     fpr, tpr, thresh = metrics.roc_curve(truth, obs)
     axes[1].plot(fpr, tpr, label = "AUC: %.2f" % dmetrics['auc'])
@@ -559,7 +581,7 @@ def example2():
 
 def clinvar(v):
     return any(x in "45" for x in re.split(patt,v.INFO.get("CLNSIG")))
-    
+
 def pli(v):
     return float(v['pLI']) < 0.9
 
@@ -588,8 +610,8 @@ def example3():
     #for i in frange(start, end, step):
     #    cpg_cutoff[str(j)+"-"+str(i)] = (j, i)
     #    j = i
-    #cpg_cutoff['0.2-1'] = (.2, 1)    
-    cpg_cutoff['0-1'] = (0, 1)    
+    #cpg_cutoff['0.2-1'] = (.2, 1)
+    cpg_cutoff['0-1'] = (0, 1)
 
     base = []
     cons = []
@@ -607,7 +629,7 @@ def example3():
     comparison = args.comparison
     if args.exclude:
         exclude = args.exclude
-        ex = "ex" + args.exclude + "."       
+        ex = "ex" + args.exclude + "."
     else:
         exclude = None
         ex = ""
@@ -617,7 +639,7 @@ def example3():
             v = get_conservation(r)
             cv.append(v)
     cpg=1
-    if y: 
+    if y:
         for iv in y: # iterable, size_grouper(1)
             #cpg = CpG(iv, genes = genes)
             b = baseline(iv, maf_cutoff = maf_cutoff, exclude = exclude, comparison = comparison, patt = patt)
@@ -634,11 +656,11 @@ def example3():
         u = upton(b, baserate)
         c = constraint(iv, maf_cutoff = maf_cutoff, genes = genes, upton = u)
         r = RVIS(iv, maf_cutoff = 1e-3, patt = patt)
-        ct = (iv, 
+        ct = (iv,
                c,
                cpg)
         if c != 0:
-            ms['nzconstraint'].append(ct)    
+            ms['nzconstraint'].append(ct)
         ms['constraint'].append(ct)
         ct = (iv,
                 u,
@@ -661,7 +683,7 @@ def example3():
         f2.write("\t".join(map(str,b))+"\n")
     f1.close()
     f2.close()
-    
+
     cutoffs = set()
     for cutoff in cpg_cutoff:
         co = str(cpg_cutoff[cutoff][0])+'-'+str(cpg_cutoff[cutoff][1])
@@ -670,7 +692,7 @@ def example3():
             for ct in ms[metric]:
                 if ct[2] >= cpg_cutoff[cutoff][0] and ct[2] <= cpg_cutoff[cutoff][1]:
                     results[metric][co].append(ct)
-    
+
     option = args.truetype
     if option == "clinvar" or option == "c":
         func = clinvar
@@ -708,5 +730,21 @@ if __name__ == "__main__":
     import doctest
     import sys
     print >>sys.stderr, (doctest.testmod())
+    rvistest()
+    1/0
+
+    parser = ArgumentParser()
+    parser.add_argument("--input", "-i", help = "file with regions (doms and nodoms) defined", type = str)
+    parser.add_argument("--genome", "-g", help = "fasta genome file for CpG calculations", type = str)
+    parser.add_argument("--pathogenic", "-p", help = "file with truth set for pathogenicity comparison", type = str)
+    parser.add_argument("--truetype", "-t", help = "truth set type, specifies what function to use, e.g., clinvar vs pLI", type = str)
+    parser.add_argument("--maf", "-m", help = "maf cutoff for baseline/uptoN metric and other metrics that utilize maf cutoffs", type = float)
+    parser.add_argument("--exclude", "-e", help = "what to exclude from calculations regarding upton metric", type = str)
+    parser.add_argument("--comparison", "-c", help = "which comparison to use for maf cutoff, greater than/equal to (le), ge, lt, gt", type = str, default = "le")
+    parser.add_argument("--regions", "-r", help = "select regional model, whether to go by file or pick region size, must use region size option if selected, choices are domains, nodoms, chunks, genes, all (regions)", type = str, default = "all")
+    parser.add_argument("--regionsize", "-s", help = "select region size for analysis", type = int)
+    parser.add_argument("--conservation", "-v", help = "GERP conservation file", type = str)
+
+    args = parser.parse_args()
 
     example3()
