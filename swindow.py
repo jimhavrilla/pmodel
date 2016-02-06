@@ -1,3 +1,8 @@
+try:
+    import matplotlib
+    matplotlib.use("Agg")
+except ImportError:
+    pass
 import toolshed as ts
 from collections import namedtuple, defaultdict, Counter
 from operator import attrgetter
@@ -7,6 +12,7 @@ from precision import remove_trailing_zeros as rtz
 from argparse import ArgumentParser
 from math import log, e
 import scipy.stats as ss
+from itertools import izip as zip
 
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
@@ -401,6 +407,7 @@ def metrics(trues, falses, figname=None, cutoff = None):
     axes[1].set_ylabel('sensitivity (TPR)')
     axes[1].plot([0, 1], [0, 1], ls='--')
     axes[1].legend(loc = "upper left")
+    axes[1].text(0.75, 0.2, "%d true+ : %d true- regions" % len(trues), len(falses))
 
     plt.savefig(figname, bbox_inches = 'tight')
     plt.close()
@@ -624,7 +631,7 @@ def uptonrunner():
             if len(chunk) < 5:
                 continue
             mafs = (float(x.mafs) for x in chunk)
-            score = sum(1.0 - m**0.4 for m in mafs if m < cutoff) / float(len(chunk))
+            score = sum(1.0 - m for m in mafs if m < cutoff) / float(len(chunk))
             if score == 1:
                 continue
             yield chunk, score
