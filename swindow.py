@@ -479,11 +479,29 @@ class Interval(object):
             I.aaf = maf
             yield I
 
+    def __str__(self):
+        return "%s\t%d\t%d\t%s\t%s\t%s" % (
+                self.chrom, self.start, self.end, self.mafs, self.transcript, self.domain)
+
 class JimFile(object):
     def __init__(self, path, regions_excluded=None, include_empties=True):
         self.path = path
         self.include_empties = include_empties
         self.re = regions_excluded
+
+    def iterchunks(self):
+
+        interval = namedtuple('interval', ['chrom', 'start', 'end', 'mafs'])
+        for d in ts.reader(self.path):
+            starts = map(int, d['starts'].split(","))
+            ends = map(int, d['ends'].split(","))
+            fmafs = map(tfloat, d['mafs'].split(",")) if d['mafs'] != "." else []
+            if len(starts) == len(ends) == 1:
+                fmafs.extend([0.0] * end)
+                yield Interval(start=starts, end=ends, mafs=fmafs)
+            print d['mafs']
+            print starts,ends,fmafs
+
 
     def __iter__(self):
         cache = []
@@ -587,6 +605,13 @@ def clinvar(v):
 def pli(v):
     return float(v['pLI']) < 0.9
 
+def tester():
+
+    print "#chrom	start	end	maf	transcript	domain"
+    input = "/scratch/ucgd/lustre/u1021864/serial/y.sort.bed.gz"
+    iterator = JimFile(input, include_empties=True)
+    for p in iterator:
+        print str(p)
 
 def uptonrunner():
 
@@ -598,13 +623,19 @@ def uptonrunner():
     iterator = JimFile(input)
     iterable = windower(iterator, smallchunk)
     cutoff = 1e-3
+    bed = open("score1.bed", "w")
 
     def genchunks():
         for i, chunk in enumerate(iterable):
-            if i % 10000 == 0:
+            if i % 50000 == 0:
                 print i, chunk[0].chrom, chunk[0].start
+            if len(chunk) < 4:
+                continue
             mafs = (float(x.mafs) for x in chunk)
-            score = sum(1.0 - m for m in mafs if m < cutoff) / float(len(chunk))
+            score = sum(1.0 - m**0.6 for m in mafs if m < cutoff) / float(len(chunk))
+            if score == 1:
+                print >>bed, "%s\t%d\t%d" % (chunk[0].chrom, chunk[0].start, chunk[-1].end)
+                continue
             #s, e = chunk[0].start, chunk[-1].end
             #seq = fad[chunk[0].chrom][s:e]
 
@@ -767,6 +798,9 @@ if __name__ == "__main__":
     import sys
     print >>sys.stderr, (doctest.testmod())
     #rvistest()
+
+    if len(sys.argv) > 1 and sys.argv[1] == "test":
+        sys.exit(tester())
     uptonrunner()
     1/0
     #1/0
