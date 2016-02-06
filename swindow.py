@@ -250,11 +250,8 @@ def rvistest():
     print metrics(res[True], res[False], "x.auc.png")
 
 def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
-                                                [x == "5" and
-                                                    v.INFO.get("max_aaf_all", -1) < 0.001 for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
-                                not_pathogenic=lambda v:
-                                                [x in "2" for x in re.split(patt,v.INFO.get("CLNSIG"))][0],
-                                                ):
+                                any(x == "5" and v.INFO.get("max_aaf_all", -1) < 0.001 for x in re.split(patt,v.INFO.get("CLNSIG"))),
+                                not_pathogenic=lambda v: any(x == "2" for x in re.split(patt,v.INFO.get("CLNSIG")))):
     """
     given a some chunks with a metric applied, do we see a difference in
     the values between pathogenic and non pathogenic variants?
@@ -616,14 +613,9 @@ def tester():
 def uptonrunner():
 
     input = "/scratch/ucgd/lustre/u1021864/serial/y.sort.bed.gz"
-    fa = Fasta('/scratch/ucgd/lustre/u1021864/serial//g1k.fasta', as_raw=True)
-    #fad = {k: str(fa[k]) for k in fa.keys()}
-
-    vcf_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
     iterator = JimFile(input)
     iterable = windower(iterator, smallchunk)
     cutoff = 1e-3
-    bed = open("score1.bed", "w")
 
     def genchunks():
         for i, chunk in enumerate(iterable):
@@ -634,19 +626,10 @@ def uptonrunner():
             mafs = (float(x.mafs) for x in chunk)
             score = sum(1.0 - m**0.4 for m in mafs if m < cutoff) / float(len(chunk))
             if score == 1:
-                print >>bed, "%s\t%d\t%d" % (chunk[0].chrom, chunk[0].start, chunk[-1].end)
                 continue
-            #s, e = chunk[0].start, chunk[-1].end
-            #seq = fad[chunk[0].chrom][s:e]
-
-            #before = score
-            #try:
-            #    score /= (1.0 - (2.0 * seq.count("CG") / (e - s)))
-            #except:
-            #    continue
-
             yield chunk, score
 
+    vcf_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
     res = evaldoms(genchunks(), vcf_path)
     print metrics(res[True], res[False], "upton.auc.png")
 
