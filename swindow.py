@@ -25,7 +25,7 @@ def bytranscriptdist(grp, inext):
     return inext.transcript != grp[0].transcript \
             or inext.start - grp[-1].end > 100
 
-def smallchunk(grp, inext, regionsize = 50):
+def smallchunk(grp, inext, regionsize=50):
     """ group by chunk, input size, default is 50 """
     return len(grp) > regionsize or inext.transcript != grp[0].transcript \
         or inext.start - grp[-1].end > 40
@@ -299,7 +299,7 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
             continue
         tbl[patho].append(reg[1])
         counts[patho] += 1
-    print "region counts:", counts
+    print >>sys.stderr, "region counts:", counts
     return tbl
 
 
@@ -388,7 +388,8 @@ def metrics(trues, falses, figname=None, cutoff = None):
     prec, rec, thresh = metrics.precision_recall_curve(truth, obs)
     fig, axes = plt.subplots(2)
     fig.tight_layout()
-    axes[0].plot(rec, prec, label = "precision: %.2f" % dmetrics['precision'])
+    axes[0].plot(rec, prec, label = "precision: %.2f" % dmetrics['precision'],
+            marker='.', lw=0.5)
     axes[0].legend(frameon = False, loc = 'upper left')
     axes[0].set_xlabel("recall")
     axes[0].set_ylabel("precision")
@@ -397,7 +398,8 @@ def metrics(trues, falses, figname=None, cutoff = None):
         axes[0].text(.85, .8, "CpG frac:\n" + cutoff.replace("-"," - "), transform = axes[0].transAxes, bbox = props)
 
     fpr, tpr, thresh = metrics.roc_curve(truth, obs)
-    axes[1].plot(fpr, tpr, label = "AUC: %.2f" % dmetrics['auc'])
+    axes[1].plot(fpr, tpr, label = "AUC: %.2f" % dmetrics['auc'], marker='.',
+            lw=0.5)
     axes[1].set_xlabel('1 - specificity (FPR)')
     axes[1].set_ylabel('sensitivity (TPR)')
     axes[1].plot([0, 1], [0, 1], ls='--')
@@ -464,13 +466,7 @@ class Interval(object):
                 posns.extend(sorted(diff))
                 mafs.extend([0.0] * len(diff))
                 types.extend(['.'] * len(diff))
-                """
-                for ip in range(s, e):
-                    if not ip in posns:
-                        posns.add(ip)
-                        mafs.append(0.0)
-                        types.append(None)
-                """
+
         pms = sorted(zip(posns, mafs, types))
 
         for p, maf, dntype in pms:
@@ -484,7 +480,7 @@ class Interval(object):
             yield I
 
 class JimFile(object):
-    def __init__(self, path, regions_excluded, include_empties=True):
+    def __init__(self, path, regions_excluded=None, include_empties=True):
         self.path = path
         self.include_empties = include_empties
         self.re = regions_excluded
@@ -591,6 +587,40 @@ def clinvar(v):
 def pli(v):
     return float(v['pLI']) < 0.9
 
+
+def uptonrunner():
+
+    input = "/scratch/ucgd/lustre/u1021864/serial/y.sort.bed.gz"
+    fa = Fasta('/scratch/ucgd/lustre/u1021864/serial//g1k.fasta', as_raw=True)
+    fad = {k: str(fa[k]) for k in fa.keys()}
+
+    vcf_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
+    iterator = JimFile(input)
+    iterable = windower(iterator, smallchunk)
+    cutoff = 1e-3
+
+
+
+    def genchunks():
+        for i, chunk in enumerate(iterable):
+            if i % 10000 == 0:
+                print chunk[0].chrom, chunk[0].start
+            mafs = [float(x.mafs) for x in chunk]
+            score = sum(1.0 for m in mafs if m < cutoff) / float(len(chunk))
+            s, e = chunk[0].start, chunk[-1].end
+            seq = fad[chunk[0].chrom][s:e]
+
+            before = score
+            try:
+                score /= (1.0 - (2.0 * seq.count("CG") / (e - s)))
+            except:
+                print "raise:", seq.count("CG"), s, e
+
+            yield chunk, score
+
+    res = evaldoms(genchunks(), vcf_path)
+    print metrics(res[True], res[False], "upton.auc.png")
+
 def example3():
     import toolshed as ts
     import matplotlib
@@ -621,7 +651,8 @@ def example3():
 
     base = []
     cons = []
-    genes = Fasta(ff)
+    genes = None
+    #genes = Fasta(ff)
     if args.regions == "chunks":
         regioner = smallchunk
         chunksize = args.regionsize
@@ -681,7 +712,7 @@ def example3():
        # results['frv'].append((iv, FRV_inline(iv, maf_cutoff=maf_cutoff)))
        # results['count_nons'].append((iv, count_nons(iv)))
         # TODO: jim add a lot more metrics here... e.g.:
-    bedname = "."+ rtz(maf_cutoff) + "." + comparison + "." + args.regions + str(chunksize) + "." + ex 
+    bedname = "."+ rtz(maf_cutoff) + "." + comparison + "." + args.regions + str(chunksize) + "." + ex
     f1 = open("constraint" + bedname + ".bed","w")
     f2 = open("baseline" + bedname + ".bed","w")
     for b,c in zip(base,cons):
@@ -700,6 +731,7 @@ def example3():
                     results[metric][co].append(ct)
 
     option = args.truetype
+    trusrc = ""
     if option == "clinvar" or option == "c":
         func = clinvar
         trusrc = "clinvar"
@@ -736,8 +768,10 @@ if __name__ == "__main__":
     import doctest
     import sys
     print >>sys.stderr, (doctest.testmod())
-    rvistest()
+    #rvistest()
+    uptonrunner()
     1/0
+    #1/0
 
     parser = ArgumentParser()
     parser.add_argument("--input", "-i", help = "file with regions (doms and nodoms) defined", type = str)
