@@ -617,7 +617,7 @@ def uptonrunner():
 
     input = "/scratch/ucgd/lustre/u1021864/serial/y.sort.bed.gz"
     fa = Fasta('/scratch/ucgd/lustre/u1021864/serial//g1k.fasta', as_raw=True)
-    fad = {k: str(fa[k]) for k in fa.keys()}
+    #fad = {k: str(fa[k]) for k in fa.keys()}
 
     vcf_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
     iterator = JimFile(input)
@@ -629,10 +629,10 @@ def uptonrunner():
         for i, chunk in enumerate(iterable):
             if i % 50000 == 0:
                 print i, chunk[0].chrom, chunk[0].start
-            if len(chunk) < 4:
+            if len(chunk) < 5:
                 continue
             mafs = (float(x.mafs) for x in chunk)
-            score = sum(1.0 - m**0.6 for m in mafs if m < cutoff) / float(len(chunk))
+            score = sum(1.0 - m**0.4 for m in mafs if m < cutoff) / float(len(chunk))
             if score == 1:
                 print >>bed, "%s\t%d\t%d" % (chunk[0].chrom, chunk[0].start, chunk[-1].end)
                 continue
