@@ -31,7 +31,7 @@ def bytranscriptdist(grp, inext):
     return inext.transcript != grp[0].transcript \
             or inext.start - grp[-1].end > 100
 
-def smallchunk(grp, inext, regionsize=50):
+def smallchunk(grp, inext, regionsize=15):
     """ group by chunk, input size, default is 50 """
     return len(grp) > regionsize or inext.transcript != grp[0].transcript \
         or inext.start - grp[-1].end > 40
@@ -281,12 +281,18 @@ def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
             # is it pathogenic
             tree[path][v.CHROM].add((v.start, v.end))
     else:
-        # TODO: copy not_pathogenic logic above.
         for d in ts.reader(vcf_path):
-            if is_pathogenic(d):
-                chrom = d.get('chrom', d['chr'])
-                start, end = int(v['start']), int(v['end'])
-                tree[chrom].add((start, end))
+            path = is_pathogenic(d)
+            nopath = not_pathogenic(d)
+            if path == nopath: continue
+            if path:
+                p += 1
+            else:
+                n += 1
+
+            chrom = d.get('chrom', d['chr']).replace('chr', '')
+            start, end = int(d['start']), int(d['end'])
+            tree[path][chrom].add((start, end))
 
     print >>sys.stderr, "pathogenic variants: %d non: %d" % (p, n)
     counts = {True: 0, False: 0, "missing": 0}
@@ -641,8 +647,16 @@ def uptonrunner():
         print >>sys.stderr, nsmall, "removed for being too short"
         print >>sys.stderr, i, "total chunks"
 
-    vcf_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
-    res = evaldoms(genchunks(), vcf_path)
+    # NOTE: these are for humvar only. not neede for clinvar.
+    def is_pathogenic(d):
+        return d['class'] == "deleterious"
+    def not_pathogenic(d):
+        return d['class'] == "neutral"
+
+    eval_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
+    eval_path = "/uufs/chpc.utah.edu/common/home/u1007787/pmodel/humvar.both.bed"
+    res = evaldoms(genchunks(), eval_path, is_pathogenic=is_pathogenic,
+            not_pathogenic=not_pathogenic)
     print metrics(res[True], res[False], "upton.auc.png")
 
 def example3():
