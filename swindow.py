@@ -599,22 +599,20 @@ def uptonrunner():
     iterable = windower(iterator, smallchunk)
     cutoff = 1e-3
 
-
-
     def genchunks():
         for i, chunk in enumerate(iterable):
             if i % 10000 == 0:
-                print chunk[0].chrom, chunk[0].start
-            mafs = [float(x.mafs) for x in chunk]
-            score = sum(1.0 for m in mafs if m < cutoff) / float(len(chunk))
-            s, e = chunk[0].start, chunk[-1].end
-            seq = fad[chunk[0].chrom][s:e]
+                print i, chunk[0].chrom, chunk[0].start
+            mafs = (float(x.mafs) for x in chunk)
+            score = sum(1.0 - m for m in mafs if m < cutoff) / float(len(chunk))
+            #s, e = chunk[0].start, chunk[-1].end
+            #seq = fad[chunk[0].chrom][s:e]
 
-            before = score
-            try:
-                score /= (1.0 - (2.0 * seq.count("CG") / (e - s)))
-            except:
-                print "raise:", seq.count("CG"), s, e
+            #before = score
+            #try:
+            #    score /= (1.0 - (2.0 * seq.count("CG") / (e - s)))
+            #except:
+            #    continue
 
             yield chunk, score
 
