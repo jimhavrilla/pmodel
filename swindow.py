@@ -623,6 +623,32 @@ def tester():
     iterator = JimFile(input, include_empties=True)
     for p in iterator:
         print str(p)
+def gerprunner():
+
+    input = sys.argv[1]
+    iterator = JimFile(input)
+    iterable = windower(iterator, smallchunk)
+    cutoff = 1e-3
+
+    def genchunks():
+        nsmall = 0
+        for i, chunk in enumerate(iterable):
+            if i % 100000 == 0:
+                print i, chunk[0].chrom, chunk[0].start
+            if len(chunk) < 5:
+                continue
+            mafs = (float(x.mafs) for x in chunk)
+            score = sum(1.0 - m for m in mafs if m < cutoff) / float(len(chunk))
+            if score == 1:
+                nsmall += 1
+                continue
+            yield chunk, score
+        print >>sys.stderr, nsmall, "removed for being too short"
+        print >>sys.stderr, i, "total chunks"
+
+    vcf_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
+    res = evaldoms(genchunks(), vcf_path)
+    print metrics(res[True], res[False], "gerp.auc.png")
 
 def uptonrunner():
 
