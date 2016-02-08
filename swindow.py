@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 from math import log, e
 import scipy.stats as ss
 from itertools import izip as zip
+from upton import chunker
 
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
@@ -632,7 +633,7 @@ def gerprunner():
 
     input = sys.argv[1]
     iterator = JimFile(input)
-    iterable = windower(iterator, smallchunk(regionsize=1))
+    iterable = windower(iterator, chunker=1)
     cutoff = 1e-3
 
     def genchunks():
