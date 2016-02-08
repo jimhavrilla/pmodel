@@ -31,7 +31,7 @@ def bytranscriptdist(grp, inext):
     return inext.transcript != grp[0].transcript \
             or inext.start - grp[-1].end > 100
 
-def smallchunk(grp, inext, regionsize=1):
+def smallchunk(grp, inext, regionsize=15):
     """ group by chunk, input size, default is 50 """
     return len(grp) >= regionsize or inext.transcript != grp[0].transcript \
         or inext.start - grp[-1].end > 40
@@ -632,7 +632,7 @@ def gerprunner():
 
     input = sys.argv[1]
     iterator = JimFile(input)
-    iterable = windower(iterator, smallchunk)
+    iterable = windower(iterator, smallchunk(regionsize=1))
     cutoff = 1e-3
 
     def genchunks():
