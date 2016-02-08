@@ -14,46 +14,53 @@ def chunker(size=40):
             or inext.start - grp[-1].end > (min(size, 40))
     return fn
 
-def evaluate(iterable, vcf_path, is_pathogenic=lambda v:
-                                any(x == "5" and v.INFO.get("max_aaf_all", -1) < 0.001 for x in re.split(patt,v.INFO.get("CLNSIG"))),
-                                not_pathogenic=lambda v: any(x == "2" for x in re.split(patt,v.INFO.get("CLNSIG")))):
+def is_pathogenic(v):
+    max_aaf_all = v.INFO.get("max_aaf_all", -1.0)
+    pos, neg = 0, 0
+    for sig in patt.split(v.INFO['CLNSIG']):
+        if sig == "5" and max_aaf_all < 0.001:
+            pos += 1
+        elif sig == "2":
+            neg += 1
+    if pos == neg: return None
+    if pos > 0 and neg > 0: return None
+    return pos > 0
+
+
+def evaluate(iterable, vcf_path, is_pathogenic=is_pathogenic):
     """
     given a some chunks with a metric applied, do we see a difference in
     the values between pathogenic and non pathogenic variants?
+    the is_pathogenic must return True for pathogenic, False for non-pathogenic
+    and None for all other variants.
     """
     from cyvcf2 import VCF
     from interlap import InterLap
 
     tbl = {True: [], False: []}
+    counts = {True: 0, False: 0}
 
     tree = {True: defaultdict(InterLap), False: defaultdict(InterLap)}
-    n, p = 0, 0
+
     if vcf_path.endswith((".vcf", ".vcf.gz")):
         for v in VCF(vcf_path):
             path = is_pathogenic(v)
-            nopath = not_pathogenic(v)
-            if path == nopath: continue
-            if path:
-                p += 1
-            else:
-                n += 1
+            if path is None: continue
+            counts[path] += 1
             # is it pathogenic
             tree[path][v.CHROM].add((v.start, v.end))
     else:
+        import toolshed as ts
         for d in ts.reader(vcf_path):
             path = is_pathogenic(d)
-            nopath = not_pathogenic(d)
-            if path == nopath: continue
-            if path:
-                p += 1
-            else:
-                n += 1
+            if path is None: continue
+            counts[path] += 1
 
             chrom = d.get('chrom', d['chr']).replace('chr', '')
             start, end = int(d['start']), int(d['end'])
             tree[path][chrom].add((start, end))
 
-    print >>sys.stderr, "pathogenic variants: %d non: %d" % (p, n)
+    print >>sys.stderr, "pathogenic variants: %d non: %d" % (counts[True], counts[False])
     counts = {True: 0, False: 0, "missing": 0}
     for reg in iterable:
         chrom = reg[0][0].chrom
@@ -70,10 +77,11 @@ def evaluate(iterable, vcf_path, is_pathogenic=lambda v:
     print >>sys.stderr, "region counts:", counts
     return tbl
 
+
 def upton(iterable, truth_set, cutoff=1e-3, vmin=1/(3*60706.)):
 
     def genchunks():
-        nsmall = 0
+        nsmall, ones = 0, 0
         for i, chunk in enumerate(iterable):
             if i % 100000 == 0:
                 if i > 0:
@@ -84,24 +92,26 @@ def upton(iterable, truth_set, cutoff=1e-3, vmin=1/(3*60706.)):
             mafs = (float(x.mafs) for x in chunk)
             score = sum((1.0 - m)**2.0 for m in mafs if m < cutoff) / float(len(chunk))
             if score == 1:
+                ones += 1
                 continue
             yield chunk, score
-        print >>sys.stderr, nsmall, "removed for being too short"
+        sys.stderr.write("%d (%.2f%%) removed for being too short\n" % (nsmall,
+                         100.0 * nsmall / float(i)))
+        sys.stderr.write("%d (%.2f%%) removed for having score of 1\n" % (ones,
+                         100.0 * ones /float(i)))
         print >>sys.stderr, i, "total chunks"
 
-    # NOTE: these are for humvar only. not neede for clinvar.
-    def is_pathogenic(d):
+    # NOTE: this is for humvar only. not needed for clinvar.
+    def humvar_pathogenic(d):
         return d['class'] == "deleterious"
-    def not_pathogenic(d):
-        return d['class'] == "neutral"
 
-    if "humvar" in truth_set :
-        res = evaluate(genchunks(), truth_set, is_pathogenic=is_pathogenic,
-            not_pathogenic=not_pathogenic)
+    if "humvar" in truth_set:
+        res = evaluate(genchunks(), truth_set, is_pathogenic=humvar_pathogenic)
     else:
         res = evaluate(genchunks(), truth_set)
 
     print metrics(res[True], res[False], "upton.auc.png")
+
 
 def main(input, truth_set, aaf_cutoff, chunk_size):
 
