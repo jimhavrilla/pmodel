@@ -1,6 +1,7 @@
 import sys
+import toolshed as ts
 from swindow import windower, JimFile, metrics
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import re
 
 patt = re.compile(',|\|')
@@ -50,7 +51,6 @@ def evaluate(iterable, vcf_path, is_pathogenic=is_pathogenic):
             # is it pathogenic
             tree[path][v.CHROM].add((v.start, v.end))
     else:
-        import toolshed as ts
         for d in ts.reader(vcf_path):
             path = is_pathogenic(d)
             if path is None: continue
@@ -69,9 +69,12 @@ def evaluate(iterable, vcf_path, is_pathogenic=is_pathogenic):
         nonpatho = len(list(tree[False][chrom].find((start, end)))) != 0
         if not (patho or nonpatho):
             counts["missing"] += 1
-
-        if patho == nonpatho:
             continue
+
+        #: NOTE: this section makes it mutually exclusive, e.g. a region with
+        # both pathogenic and benign variants will be skipped.
+        #if patho == nonpatho:
+        #    continue
         tbl[patho].append(reg[1])
         counts[patho] += 1
     print >>sys.stderr, "region counts:", counts
@@ -117,8 +120,18 @@ def main(input, truth_set, aaf_cutoff, chunk_size):
 
     iterator = JimFile(input)
     iterable = windower(iterator, chunker(chunk_size))
-
     upton(iterable, truth_set, aaf_cutoff)
+
+
+def rvis(truth_set):
+    interval = namedtuple('interval', ['chrom', 'start', 'end'])
+    def genregions():
+        for d in ts.reader("rvis.bed"):
+            score = float(d['pct'])
+            chunk = [interval(d['chrom'], int(d['start']), int(d['end']))]
+            yield chunk, -score
+    res = evaluate(genregions(), truth_set)
+    print metrics(res[True], res[False], "rvis.auc.png")
 
 
 if __name__ == "__main__":
@@ -137,4 +150,6 @@ if __name__ == "__main__":
             default=20)
 
     a = p.parse_args()
+
+    #rvis(a.truth_set)
     main(a.input, a.truth_set, a.aaf_cutoff, a.chunk_size)
