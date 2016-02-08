@@ -263,6 +263,49 @@ def rvistest():
     res = evaldoms(genregions(), vcf_path)
     print metrics(res[True], res[False], "x.auc.png")
 
+
+def eval2(iterable, vcf_pos, vcf_neg):
+    """
+    given a some chunks with a metric applied, do we see a difference in
+    the values between pathogenic and non pathogenic variants?
+    """
+    from cyvcf2 import VCF
+    from interlap import InterLap
+
+    tbl = {True: [], False: []}
+
+    tree = {True: defaultdict(InterLap), False: defaultdict(InterLap)}
+    n, p = 0, 0
+    for v in VCF(vcf_pos):
+        path = any(x == "5" and v.INFO.get("max_aaf_all", -1) < 0.001 for x in re.split(patt,v.INFO.get("CLNSIG")))
+        if path is False: continue
+        not_path = any(x == "2" for x in re.split(patt,v.INFO.get("CLNSIG")))
+        if not_path is True: continue
+        # is it pathogenic
+        tree[True][v.CHROM].add((v.start, v.end))
+        p += 1
+
+
+    for v in VCF(vcf_neg):
+        tree[False][v.CHROM].add((v.start, v.end))
+        n += 1
+    print "n true-", n, "n true+", p
+    counts = {True: 0, False: 0, "missing": 0}
+    for reg in iterable:
+        chrom = reg[0][0].chrom
+        start, end = reg[0][0].start, reg[0][-1].end
+        patho = len(list(tree[True][chrom].find((start, end)))) != 0
+        nonpatho = len(list(tree[False][chrom].find((start, end)))) != 0
+        if not (patho or nonpatho):
+            counts["missing"] += 1
+
+        if patho == nonpatho:
+            continue
+        tbl[patho].append(reg[1])
+        counts[patho] += 1
+    print >>sys.stderr, "region counts:", counts
+    return tbl
+
 def evaldoms(iterable, vcf_path, is_pathogenic=lambda v:
                                 any(x == "5" and v.INFO.get("max_aaf_all", -1) < 0.001 for x in re.split(patt,v.INFO.get("CLNSIG"))),
                                 not_pathogenic=lambda v: any(x == "2" for x in re.split(patt,v.INFO.get("CLNSIG")))):
@@ -632,7 +675,7 @@ def tester():
     for p in iterator:
         print str(p)
 def gerprunner():
-    
+
     import pyBigWig
 
     b = pyBigWig.open("/scratch/ucgd/lustre/u1021864/serial/hg19.gerp.bw")
@@ -656,14 +699,15 @@ def gerprunner():
         print >>sys.stderr, i, "total chunks"
 
     vcf_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
-    res = evaldoms(genchunks(), vcf_path)
+    res = eval2(genchunks(), vcf_path,
+        "/scratch/ucgd/lustre/u1021864/serial/esp-common.vcf.gz")
     print metrics(res[True], res[False], "gerp.auc.png")
 
 def uptonrunner():
 
     input = "/scratch/ucgd/lustre/u1021864/serial/y.sort.bed.gz"
     iterator = JimFile(input)
-    iterable = windower(iterator, smallchunk)
+    iterable = windower(iterator, chunker(20))
     cutoff = 1e-3
 
     def genchunks():
@@ -689,10 +733,11 @@ def uptonrunner():
         return d['class'] == "neutral"
 
     eval_path = "/scratch/ucgd/lustre/u1021864/serial/clinvar-anno.vcf.gz"
-    eval_path = "/uufs/chpc.utah.edu/common/home/u1007787/pmodel/humvar.both.bed"
-    res = evaldoms(genchunks(), eval_path, is_pathogenic=is_pathogenic,
-            not_pathogenic=not_pathogenic)
-    print metrics(res[True], res[False], "upton.auc.png")
+    #res = evaldoms(genchunks(), eval_path, is_pathogenic=is_pathogenic, not_pathogenic=not_pathogenic)
+    res = eval2(genchunks(), eval_path,
+        "esp-vcommon.vcf.gz")
+        #"/scratch/ucgd/lustre/u1021864/serial/esp-common.vcf.gz")
+    print metrics(res[True], res[False], "upton-esp.auc.png")
 
 def example3():
     import toolshed as ts
