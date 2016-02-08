@@ -33,8 +33,16 @@ def bytranscriptdist(grp, inext):
 
 def smallchunk(grp, inext, regionsize=15):
     """ group by chunk, input size, default is 50 """
-    return len(grp) > regionsize or inext.transcript != grp[0].transcript \
+    return len(grp) >= regionsize or inext.transcript != grp[0].transcript \
         or inext.start - grp[-1].end > 40
+
+def chunker(size=40):
+
+    def fn(grp, inext):
+        """ group by chunk, input size, default is 50 """
+        return len(grp) >= size or inext.transcript != grp[0].transcript \
+            or inext.start - grp[-1].end > (min(size, 40))
+    return fn
 
 def frange(start, stop, step):
     r = start
@@ -624,25 +632,26 @@ def tester():
     for p in iterator:
         print str(p)
 def gerprunner():
+    
+    import pyBigWig
+
+    b = pyBigWig.open("/scratch/ucgd/lustre/u1021864/serial/hg19.gerp.bw")
+   # x = list(range(1,23)); x.append("X"), x.append("Y")
 
     input = sys.argv[1]
     iterator = JimFile(input)
-    iterable = windower(iterator, smallchunk)
+    iterable = windower(iterator, chunker(1))
     cutoff = 1e-3
 
     def genchunks():
         nsmall = 0
         for i, chunk in enumerate(iterable):
+            #if len(chunk) < 5:
+            #    continue
+            score = b.stats("chr"+chunk[0].chrom, chunk[0].start, chunk[-1].end)
+            yield chunk, score[0]
             if i % 100000 == 0:
-                print i, chunk[0].chrom, chunk[0].start
-            if len(chunk) < 5:
-                continue
-            mafs = (float(x.mafs) for x in chunk)
-            score = sum(1.0 - m for m in mafs if m < cutoff) / float(len(chunk))
-            if score == 1:
-                nsmall += 1
-                continue
-            yield chunk, score
+                print i, chunk[0].chrom, chunk[0].start, score
         print >>sys.stderr, nsmall, "removed for being too short"
         print >>sys.stderr, i, "total chunks"
 
@@ -836,7 +845,8 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         sys.exit(tester())
-    uptonrunner()
+    #uptonrunner()
+    gerprunner()
     1/0
     #1/0
 
