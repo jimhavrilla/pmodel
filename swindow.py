@@ -13,7 +13,6 @@ from argparse import ArgumentParser
 from math import log, e
 import scipy.stats as ss
 from itertools import izip as zip
-from upton import chunker
 
 
 interval = namedtuple('interval', ['chrom', 'start', 'end'])
@@ -36,6 +35,14 @@ def smallchunk(grp, inext, regionsize=15):
     """ group by chunk, input size, default is 50 """
     return len(grp) >= regionsize or inext.transcript != grp[0].transcript \
         or inext.start - grp[-1].end > 40
+
+def chunker(size=40):
+
+    def fn(grp, inext):
+        """ group by chunk, input size, default is 50 """
+        return len(grp) >= size or inext.transcript != grp[0].transcript \
+            or inext.start - grp[-1].end > (min(size, 40))
+    return fn
 
 def frange(start, stop, step):
     r = start
@@ -633,7 +640,7 @@ def gerprunner():
 
     input = sys.argv[1]
     iterator = JimFile(input)
-    iterable = windower(iterator, chunker=1)
+    iterable = windower(iterator, chunker(1))
     cutoff = 1e-3
 
     def genchunks():
