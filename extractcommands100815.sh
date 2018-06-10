@@ -183,6 +183,7 @@ for ((i=0; i<${#dir[@]}; i++)); do bedtools intersect -a $DATA/domaincoordsdnds.
 dir=($(ls $SCRATCH/wg*txt))
 for ((i=0; i<${#dir[@]}; i++)); do awk '{if ($7>=10) print $0}' ${dir[$i]} | wc -l; done #in alpha-order, 100mer, 24, 36, 40, 50, 75, ConsensusExcludable, RegionsExcludable, Uniq20bp, Uniq35bp
 
+# expects to have all the wgEncodeMappabilityTracks in SCRATCH (large)
 dir=($(ls $SCRATCH/wg*.bed*; ls $DATA/LCR*; ls $DATA/hg* | grep -v selfchain))
 for ((i=0; i<${#dir[@]}; i++)); do cut -f 1,2,3 ${dir[$i]} | sort -k1,1 -k2,2n | bedtools merge >> $DATA/blah.bed; done
 sort -k1,1 -k2,2n $DATA/blah.bed > $DATA/allrepeatsmaps.bed
